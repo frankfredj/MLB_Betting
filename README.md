@@ -30,7 +30,7 @@ The game URLs are stored in **/Misc**, whereas the batters' csv file is saved in
 
 **NOTE: You need to download the Abreviations_Dictionary.csv file at https://drive.google.com/file/d/19urLxfXN0JayHZbMYtme_CkKKfzA1N9e/view?usp=sharing, and save it under /Misc in order to be able to clean the data. Different websites use different abreviations to identify teams, thus a translation tool is sometimes needed to unify various files. This needs to be done only once, that is, upon the very first initiation of the Baseball_Scrapper object accross all instances of its usages.**
 
-Box-scores csv files have to be cleaned before they can be used for statistical purposes. This includes formating team names, eliminating duplicated columns, converting strings to doubles, fixing duplicated match IDs (i.e.: when two games are played on the same day), adding a position variable to batters (1B, 2B, 3B, SS, ect.), and tagging starting pitchers. This can be done via the following method:
+Box-scores csv files have to be cleaned before they can be used for statistical purposes. This includes formating team names, eliminating duplicated columns, converting strings to doubles, fixing duplicated match IDs (i.e.: when two games are played on the same day), adding a position variable to batters (1B, 2B, 3B, SS, ect.), replacing missing data with 0s, adding columns specifying if a 0 is in fact a case of missing data, and tagging starting pitchers. This can be done via the following method:
 
 ```python
 scrapper.Clean_Data()
@@ -68,6 +68,19 @@ In order to query a row for a specific set of players, use the following method:
 
 scrapper.Query_X_row(pitcher_home, batters_home, pitcher_away, batters_away, date, last_n_days, at_location, bat, pitch, pitchSP)
 ```
+
+In order to query a row given a specific match ID, use the following method:
+```python
+scrapper.Query_from_ID(ID, last_n_days, at_location, bat, pitch, pitchSP)
+```
+
+In order to query every single scrapped match (i.e.: if one wishes to build a completed regression frame based off his or her entire box-scores database), use the method outlined below. *Note that the same method is used to merely update an existing regression frame csv file.*
+```python
+#purge: boolean, if True then the bat, pitch and pitchSP frames will be purged every 100 iterations.
+scrapper.Query_all_MLB_Odds_matches(last_n_days, at_location, purge)
+```
+
+
 
 
 
