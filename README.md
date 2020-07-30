@@ -25,8 +25,8 @@ The game URLs are stored in **/Misc**, whereas the batters' csv file is saved in
 
 ![](https://i.imgur.com/KX6K3AY.png)
 
-<br\>
-<br\>
+<br/>
+<br/>
 ## Data Pre-processing
 
 **NOTE: You need to download the Abreviations_Dictionary.csv file at https://drive.google.com/file/d/19urLxfXN0JayHZbMYtme_CkKKfzA1N9e/view?usp=sharing, and save it under /Misc in order to be able to clean the data. Different websites use different abreviations to identify teams, thus a translation tool is sometimes needed to unify various files. This needs to be done only once, that is, upon the very first initiation of the Baseball_Scrapper object accross all instances of its usages.**
@@ -47,8 +47,8 @@ Lastly, a database solely comprising relief pitches can be build via the method 
 scrapper.Build_Filling_Pitchers_Database()
 ```
 
-<br\>
-<br\>
+<br/>
+<br/>
 ## Obtaining last-n-days team averages
 
 In order to access a player's performance over the last **n** days, we obtain the sums of all game events that can logically be added. *(I.e.: we can add homeruns (HR) together for a given player, but not his homeruns over first base (HR/FB). To outline this fact, consider two games where a player scored 2, then 0 homeruns for 3, then 7 first base reached. While the average of his HR/FB is 1/3, he in fact scored 2 homeruns for a total of 8 first bases, which gives us a fraction of 1/10.)* Said sums are then used to compute the average sum of events per game for each individual, before being added up to compute the overall expected sum of events for a given roster. Once this is done, we can accurately compute the average team performance in terms of sabermetrics, ratios, ect.
@@ -82,8 +82,8 @@ In order to query every single scrapped match (i.e.: if one wishes to build a co
 scrapper.Query_all_MLB_Odds_matches(last_n_days, at_location, purge)
 ```
 
-<br\>
-<br\>
+<br/>
+<br/>
 ## Gross outliers removal
 
 ###### Note: The data used throughout the remainder of this text was obtained with box-scores from 2010 to 2020, using last_n_days = 25 and at_location = True. 
