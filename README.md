@@ -25,7 +25,8 @@ The game URLs are stored in **/Misc**, whereas the batters' csv file is saved in
 
 ![](https://i.imgur.com/KX6K3AY.png)
 
-
+<\br>
+<\br>
 ## Data Pre-processing
 
 **NOTE: You need to download the Abreviations_Dictionary.csv file at https://drive.google.com/file/d/19urLxfXN0JayHZbMYtme_CkKKfzA1N9e/view?usp=sharing, and save it under /Misc in order to be able to clean the data. Different websites use different abreviations to identify teams, thus a translation tool is sometimes needed to unify various files. This needs to be done only once, that is, upon the very first initiation of the Baseball_Scrapper object accross all instances of its usages.**
@@ -46,7 +47,8 @@ Lastly, a database solely comprising relief pitches can be build via the method 
 scrapper.Build_Filling_Pitchers_Database()
 ```
 
-
+<\br>
+<\br>
 ## Obtaining last-n-days team averages
 
 In order to access a player's performance over the last **n** days, we obtain the sums of all game events that can logically be added. *(I.e.: we can add homeruns (HR) together for a given player, but not his homeruns over first base (HR/FB). To outline this fact, consider two games where a player scored 2, then 0 homeruns for 3, then 7 first base reached. While the average of his HR/FB is 1/3, he in fact scored 2 homeruns for a total of 8 first bases, which gives us a fraction of 1/10.)* Said sums are then used to compute the average sum of events per game for each individual, before being added up to compute the overall expected sum of events for a given roster. Once this is done, we can accurately compute the average team performance in terms of sabermetrics, ratios, ect.
@@ -80,7 +82,35 @@ In order to query every single scrapped match (i.e.: if one wishes to build a co
 scrapper.Query_all_MLB_Odds_matches(last_n_days, at_location, purge)
 ```
 
+<\br>
+<\br>
+## Gross outliers removal
 
+###### Note: The data used throughout the remainder of this text was obtained with box-scores from 2010 to 2020, using last_n_days = 25 and at_location = True. 
+
+Vectors of average values computed with the functions above sometime contain gross outliers, due to being compiled with an insufficient amount of data. As an example, the FIP- statistic is sometime computed by dividing extremely small numbers with respect to the starting pitcher, which leads to the following density function:
+
+<\br>
+![](https://i.imgur.com/QcFcN56.png)
+<\br>
+
+To remove the problematic data points, the following non-parametric procedure is recursively applied to every columns:
+1. Compute the average knn distances with n = 20
+2. Eliminate the points **x<sub>k</sub>** such that knn(**x<sub>k</sub>**) is over 3 standard deviations away from its mean
+3. Update the remaining points' knn distances
+
+The process outlined above produces the following density plot for the FIP- statistic:
+
+<\br>
+![](https://i.imgur.com/du4CE9T.png)
+<\br>
+
+In total, 1031 rows out of a total of 19 678 had to be removed due to the presence of gross outliers within their respective column, which translates to a 5.24% removal rate.
+
+
+## Simulating artificial data
+
+In order to 
 
 
 
