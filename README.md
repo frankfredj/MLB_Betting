@@ -91,10 +91,10 @@ Vectors of average values computed with the functions above sometime contain gro
 ![](https://i.imgur.com/QcFcN56.png)<br/>
 
 
-To remove the problematic data points, the following non-parametric procedure is recursively applied to every columns:
+To remove the problematic data points, the following non-parametric procedure is recursively applied to every columns:<br/>
 1. Compute the average knn distances with n = 20
 2. Eliminate the points **x<sub>k</sub>** such that knn(**x<sub>k</sub>**) is over 3 standard deviations away from its mean
-3. Update the remaining points' knn distances
+3. Update the remaining points' knn distances<br/>
 
 The process outlined above produces the following density plot for the FIP- statistic:<br/>
 
@@ -107,7 +107,10 @@ In total, 1031 rows out of a total of 19 678 had to be removed due to the presen
 
 ## Simulating artificial data
 
-In order to 
+In order to generate synthetic data, the following steps are first followed:<br/>
+1. Add 4 extra columns to the data matrix **X** , so to include the opening moneylines and the final scores within our empirical joint distribution.
+2. Remove colinearities and near-zero variance columns, so to produce an invertible variance-covariance matrix.
+3. Obtrain the Cholesky decomposition of the variance-covariance matrix.<br/>
 
 
 
