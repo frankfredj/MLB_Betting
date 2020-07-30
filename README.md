@@ -118,18 +118,25 @@ Once this is done, our data can be modeled as matrix multiplication of **m** ind
 To counter the serious downsides mentioned above, the simulated independent variables **z** are bounded by exploiting the fact that **transpose(L)** is a lower-triangular matrix. First, determine two bound vectors **lb** and **ub** based on the empirical dataset **X**. Next, apply the following standard MCMC algorithm: <br/>
 
 **Iteration 1...**
+
 **lb<sub>1</sub> <= L<sub>1,1</sub> z<sub>1</sub> <= ub<sub>1</sub>**
+
 **lb<sub>1</sub> / L<sub>1,1</sub> <=  z<sub>1</sub> <= ub<sub>1</sub> / L<sub>1,1</sub>**
+
 **Simulate z<sub>1</sub> from its bounded empirical CDF**<br/>
 
 **Iteration 2...**
+
 **lb<sub>2</sub> <= L<sub>2,1</sub> z<sub>1</sub> + L<sub>2,2</sub> z<sub>2</sub> <= ub<sub>2</sub>**
+
 **(lb<sub>2</sub> - L<sub>2,1</sub> z<sub>1</sub>) / L<sub>2,2</sub> <=   z<sub>2</sub> <= (ub<sub>2</sub> - L<sub>2,1</sub> z<sub>1</sub>) / L<sub>2,2</sub>**
+
 **Simulate z<sub>2</sub> from its bounded empirical CDF**<br/>
 
 **...**<br/>
 
 **Iteration m...**
+
 **...**<br/>
 
 As a way to reduce variance, vectors are simulated in pairs such that the first member uses **m** random variables **U** uniformly distributed on (0,1), whereas the second one uses **1-U** instead. It is trivial that **Cov(F<sup>-1</sup>(u) , F<sup>-1</sup>(1-u))** < 0.
