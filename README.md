@@ -110,7 +110,38 @@ In total, 1031 rows out of a total of 19 678 had to be removed due to the presen
 In order to generate synthetic data, the following steps are first followed:<br/>
 1. Add 4 extra columns to the data matrix **X** , so to include the opening moneylines and the final scores within our empirical joint distribution.
 2. Remove colinearities and near-zero variance columns, so to produce an invertible variance-covariance matrix.
-3. Obtrain the Cholesky decomposition of the variance-covariance matrix.<br/>
+3. Obtain the Cholesky decomposition **L** of the variance-covariance matrix.
+4. Obtain the principal components **Z** of **X** by multiplying **X** with the inverse of **L**.<br/> 
+
+Once this is done, our data can be modeled as matrix multiplication of **m** independent random variables, that is: **X** = **Z % L** . For a single column vector **x** , this corresponds to **x = transpose(L) % z**. This, however, tends to produce data points which fall outside their usual range. (I.e.: scores below 0). Moreover, the convergence in terms of covariances and means is extremely slow, which can lead to synthetic samples that are downright statistically nonsensical.
+
+To counter the serious downsides mentioned above, the simulated independent variables **z** are bounded by exploiting the fact that **transpose(L)** is a lower-triangular matrix. First, determine two bound vectors **lb** and **ub** based on the empirical dataset **X**. Next, apply the following standard MCMC algorithm: <br/>
+
+**Iteration 1...**
+**lb<sub>1</sub> <= L<sub>1,1</sub> z<sub>1</sub> <= ub<sub>1</sub>**
+**lb<sub>1</sub> / L<sub>1,1</sub> <=  z<sub>1</sub> <= ub<sub>1</sub> / L<sub>1,1</sub>**
+**Simulate z<sub>1</sub> from its bounded empirical CDF**<br/>
+
+**Iteration 2...**
+**lb<sub>2</sub> <= L<sub>2,1</sub> z<sub>1</sub> + L<sub>2,2</sub> z<sub>2</sub> <= ub<sub>2</sub>**
+**(lb<sub>2</sub> - L<sub>2,1</sub> z<sub>1</sub>) / L<sub>2,2</sub> <=   z<sub>2</sub> <= (ub<sub>2</sub> - L<sub>2,1</sub> z<sub>1</sub>) / L<sub>2,2</sub>**
+**Simulate z<sub>2</sub> from its bounded empirical CDF**<br/>
+
+**...**<br/>
+
+**Iteration m...**
+**...**<br/>
+
+As a way to reduce variance, vectors are simulated in pairs such that the first member uses **m** random variables **U** uniformly distributed on (0,1), whereas the second one uses **1-U** instead. It is trivial that **Cov(F<sup>-1</sup>(u) , F<sup>-1</sup>(1-u))** < 0.
+
+
+To assess the MCMC convergence in distribution, a synthetic sample of 18 647 games was produced, then compared with the original data. Heatmaps of the correlations, alongside density plots of the normalized differences in column means and their associates t-test p-values, are show below.
+
+![](https://i.imgur.com/7pK3Vqb.png)<br/>
+
+![](https://i.imgur.com/l1W5bSJ.png)<br/>
+
+
 
 
 
