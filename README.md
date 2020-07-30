@@ -92,9 +92,9 @@ Vectors of average values computed with the functions above sometime contain gro
 
 
 To remove the problematic data points, the following non-parametric procedure is recursively applied to every columns:<br/>
-1. Compute the average knn distances with n = 20
-2. Eliminate the points **x<sub>k</sub>** such that knn(**x<sub>k</sub>**) is over 3 standard deviations away from its mean
-3. Update the remaining points' knn distances<br/>
+1. Compute the average knn distances with n = 20.
+2. Eliminate the points **x<sub>k</sub>** such that knn(**x<sub>k</sub>**) is over 3 standard deviations away from its mean.
+3. Update the remaining points' knn distances.<br/>
 
 The process outlined above produces the following density plot for the FIP- statistic:<br/>
 
@@ -135,9 +135,8 @@ To counter the serious downsides mentioned above, the simulated independent vari
 
 **...**<br/>
 
-**Iteration m...**
+**Iteration m...**<br/>
 
-**...**<br/>
 
 As a way to reduce variance, vectors are simulated in pairs such that the first member uses **m** random variables **U** uniformly distributed on (0,1), whereas the second one uses **1-U** instead. It is trivial that **Cov(F<sup>-1</sup>(u) , F<sup>-1</sup>(1-u))** < 0.
 
