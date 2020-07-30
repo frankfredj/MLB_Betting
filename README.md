@@ -85,22 +85,22 @@ scrapper.Query_all_MLB_Odds_matches(last_n_days, at_location, purge)
 
 ###### Note: The data used throughout the remainder of this text was obtained with box-scores from 2010 to 2020, using last_n_days = 25 and at_location = True. 
 
-Vectors of average values computed with the functions above sometime contain gross outliers, due to being compiled with an insufficient amount of data. As an example, the FIP- statistic is sometime computed by dividing extremely small numbers with respect to the starting pitcher, which leads to the following density function:
+Vectors of average values computed with the functions above sometime contain gross outliers, due to being compiled with an insufficient amount of data. As an example, the FIP- statistic is sometime computed by dividing extremely small numbers with respect to the starting pitcher, which leads to the following density function:<br/>
 
-<\br>
-![](https://i.imgur.com/QcFcN56.png)
-<\br>
+
+![](https://i.imgur.com/QcFcN56.png)<br/>
+
 
 To remove the problematic data points, the following non-parametric procedure is recursively applied to every columns:
 1. Compute the average knn distances with n = 20
 2. Eliminate the points **x<sub>k</sub>** such that knn(**x<sub>k</sub>**) is over 3 standard deviations away from its mean
 3. Update the remaining points' knn distances
 
-The process outlined above produces the following density plot for the FIP- statistic:
+The process outlined above produces the following density plot for the FIP- statistic:<br/>
 
-<\br>
-![](https://i.imgur.com/du4CE9T.png)
-<\br>
+
+![](https://i.imgur.com/du4CE9T.png)<br/>
+
 
 In total, 1031 rows out of a total of 19 678 had to be removed due to the presence of gross outliers within their respective column, which translates to a 5.24% removal rate.
 
