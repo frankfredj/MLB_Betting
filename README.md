@@ -80,6 +80,8 @@ In order to query every single scrapped match (i.e.: if one wishes to build a co
 scrapper.Query_all_MLB_Odds_matches(last_n_days, at_location, purge)
 ```
 
+###### Note: Computing rolling averages with Python is painfuly slow. A quick version is avaible in the file 1_Fast_Averages_in_RCPP.R. It is fully coded in C++, and uses parallel processing. 
+
 
 ## Gross outliers removal
 
