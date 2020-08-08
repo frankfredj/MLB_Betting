@@ -86,6 +86,13 @@ Since our data consists in a multitude of time series, stationarity isn't guaran
 
 The union of both sets of retained features contains a high amount of strongly-correlated predictors. Caret's **findCorrelation** function with its **cutoff** argument set to 0.75 was used to weed-out possibly-redundant features, yielding the final result:
 
+![](https://i.imgur.com/ZHbYf3N.png)
+![](https://i.imgur.com/IlBvjJ7.png)
+
+The final retained features have low inter-correlations, and means close to zero. 
+
+
+
 
 
 
