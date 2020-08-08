@@ -77,6 +77,15 @@ In total, 126 rows out of a total of 21 018 had to be removed due to the presenc
 
 
 
+## Data stationarity and Feature Selection
+
+Since our data consists in a multitude of time series, stationarity isn't guaranteed for each predictor. A simple fix is to work with the differences between the home team's and the visiting team's respective statistics. They should both have the same trend, thus their differences should be stationary. Once this is done, **L1-penalized logistic regression** and **R's Boruta package** are used as feature-selection tools. A correlation heatmap of the union and intersection of both sets of retained features is shown below.
+
+![](https://i.imgur.com/MISv0db.png) <br/>
+![](https://i.imgur.com/lqPA3VE.png) <br/>
+
+
+
 
 
 
