@@ -35,6 +35,19 @@ bat <- read.csv(paste(path, "/MLB_Modeling/Bat/Clean_Data/FanGraphs_Box_Scores.c
 pitch <- read.csv(paste(path, "/MLB_Modeling/Pitch/Clean_Data/FanGraphs_Box_Scores.csv", sep = ""))
 scores <- read.csv(paste(path, "/MLB_Modeling/Scores/Clean_Data/FanGraphs_Scores.csv", sep = ""))
 
+#Compute certain missing metrics
+pitch$BIP <- (pitch$H - pitch$HR) / pitch$BABIP
+pitch$BIP[which(is.na(pitch$BIP) | is.infinite(pitch$BIP))] <- 0
+pitch$BIP <- round(pitch$BIP)
+
+pitch$LI <- pitch$WPA / pitch$WPA.LI
+pitch$LI[which(is.na(pitch$LI) | is.infinite(pitch$LI))] <- 0
+
+bat$LI <- bat$WPA / bat$WPA.LI
+bat$LI[which(is.na(bat$LI) | is.infinite(bat$LI))] <- 0
+
+
+
 bat$Date_Numeric <- floor(as.numeric(as.POSIXct(bat$Date, "%Y-%m-%d", tz = "")) / (24*60*60))
 pitch$Date_Numeric <- floor(as.numeric(as.POSIXct(pitch$Date, "%Y-%m-%d", tz = "")) / (24*60*60))
 scores$Date_Numeric <- floor(as.numeric(as.POSIXct(scores$Date, "%Y-%m-%d", tz = "")) / (24*60*60))
@@ -49,21 +62,21 @@ pitch <- sqldf("Select * from pitch ORDER BY Name, Date_Numeric, Team DESC")
 
 
 #Keep linear metrics
-col_index <- c("BO", "PA", "H", "HR", "R", "RBI", "BB", "SO", "IBB", 
+col_index <- sort(c("BO", "PA", "H", "HR", "R", "RBI", "BB", "SO", "IBB", 
 					"X1B", "X2B", "X3B", "HBP", "SF", "SH", "GDP", "SB", "CS",
 						"GB", "FB", "LD", "IFFB", "IFH", "BU", "BUH", "Balls",
 							"Strikes", "Pitches", "WPA", "WPA_plus", "WPA_minus", "PH",
-								"pLI", "AB", "wRC.", "Spd", "wSB", "wRC", "RE24")
+								"pLI", "AB", "wRC.", "Spd", "wSB", "wRC", "RE24", "LI", "phLI"))
 
 bat_names <- bat[c("Name", "Team", "ID", "Opponent", "Date", "Date_Numeric")]
 bat_names$Name_Numeric <- as.numeric(bat_names$Name)
 bat <- as.matrix(bat[col_index])
 
-col_index = c("IP", "TBF", "H", "HR", "ER", "BB", "SO", "pLI", "BS",
+col_index = sort(c("IP", "TBF", "H", "HR", "ER", "BB", "SO", "pLI", "BS",
 				"GS", "G", "CG", "ShO", "SV", "HLD", "R", "IBB", "IFH",
 					"HBP", "WP", "BK", "WPA", "LD", "FB", "GB", "BUH", "tERA",
 						"IFFB", "BU", "RS", "Balls", "Strikes", "Pitches",
-							"WPA_plus", "WPA_minus", "RE24", "inLI", "gmLI", "exLI")
+							"WPA_plus", "WPA_minus", "RE24", "inLI", "gmLI", "exLI", "LI", "BIP"))
 
 pitch_names <- pitch[c("Name", "ID", "Team", "Opponent", "Starting", "Date", "Date_Numeric")]
 pitch_names$Name_Numeric <- as.numeric(pitch_names$Name)
@@ -149,164 +162,14 @@ out <- NULL
 ################################################
 
 
+
+
 ################################################
 ################ Functions #####################
 ################################################
 
-
-test <- players_row_query_weight_vec(bat, bat_names$Name_Numeric, c(1:10), bat_names$Date_Numeric, 16500, 500, 2)
-microbenchmark(players_row_query_weight_vec(bat, bat_names$Name_Numeric, c(1:10), bat_names$Date_Numeric, 16500, 500, 2))
-
-
-query_roster(scores$ID[1], scores$ID,
-                    scores$Date_Numeric, 
-                    scores$Team_Home_numeric, 
-                    scores$Team_Away_numeric,
-
-                    bat_names$ID,
-                    bat_names$Name_Numeric, 
-                    bat_names$Team_numeric,
-
-                    pitch_starting_names$ID,
-                    pitch_starting_names$Name_Numeric, 
-                    pitch_starting_names$Team_numeric,
-
-                    pitch_relief_names$ID,
-                    pitch_relief_names$Name_Numeric, 
-                    pitch_relief_names$Team_numeric)
-
-
- query_X_row_by_ID(scores$ID[1], 25, 2, 1, 38*4,
-
-										scores$ID,
-					                    scores$Date_Numeric, 
-					                    scores$Team_Home_numeric, 
-					                    scores$Team_Away_numeric,
-
-                                        bat,
-                                        bat_names$ID,
-                                        bat_names$Name_Numeric,  
-                                        bat_names$Team_numeric,
-                                        bat_names$Date_Numeric,
-
-                                        pitch,
-                                        pitch_names$Name_Numeric,  
-                                        pitch_names$Date_Numeric,
-
-                                        pitch_starting,
-                                        pitch_starting_names$ID,
-                                        pitch_starting_names$Name_Numeric,  
-                                        pitch_starting_names$Team_numeric,
-                                        pitch_starting_names$Date_Numeric,                                        
-
-                                        pitch_relief,
-                                        pitch_relief_names$ID,
-                                        pitch_relief_names$Name_Numeric,  
-                                        pitch_relief_names$Team_numeric,
-                                        pitch_relief_names$Date_Numeric)
-
-
-
-for(i in 1:nrow(scores)){
-
-	a <- try(query_X_row_by_ID(scores$ID[i], 25, 2, 1, 38*4,
-
-										scores$ID,
-					                    scores$Date_Numeric, 
-					                    scores$Team_Home_numeric, 
-					                    scores$Team_Away_numeric,
-
-                                        bat,
-                                        bat_names$ID,
-                                        bat_names$Name_Numeric,  
-                                        bat_names$Team_numeric,
-                                        bat_names$Date_Numeric,
-
-                                        pitch,
-                                        pitch_names$Name_Numeric,  
-                                        pitch_names$Date_Numeric,
-
-                                        pitch_starting,
-                                        pitch_starting_names$ID,
-                                        pitch_starting_names$Name_Numeric,  
-                                        pitch_starting_names$Team_numeric,
-                                        pitch_starting_names$Date_Numeric,                                        
-
-                                        pitch_relief,
-                                        pitch_relief_names$ID,
-                                        pitch_relief_names$Name_Numeric,  
-                                        pitch_relief_names$Team_numeric,
-                                        pitch_relief_names$Date_Numeric))
-
-	if(class(a) == "try-error"){break}
-
-}
-
-
-id = scores$ID[i]
-
-debugg(id, 25, 2, 1, 38*4,
-
-										scores$ID,
-					                    scores$Date_Numeric, 
-					                    scores$Team_Home_numeric, 
-					                    scores$Team_Away_numeric,
-
-                                        bat,
-                                        bat_names$ID,
-                                        bat_names$Name_Numeric,  
-                                        bat_names$Team_numeric,
-                                        bat_names$Date_Numeric,
-
-                                        pitch,
-                                        pitch_names$Name_Numeric,  
-                                        pitch_names$Date_Numeric,
-
-                                        pitch_starting,
-                                        pitch_starting_names$ID,
-                                        pitch_starting_names$Name_Numeric,  
-                                        pitch_starting_names$Team_numeric,
-                                        pitch_starting_names$Date_Numeric,                                        
-
-                                        pitch_relief,
-                                        pitch_relief_names$ID,
-                                        pitch_relief_names$Name_Numeric,  
-                                        pitch_relief_names$Team_numeric,
-                                        pitch_relief_names$Date_Numeric)
-
-
-
-
-
-query_ID_list(scores$ID[1:10], 25, 2, 1, 38*4, 8,
-
-										scores$ID,
-					                    scores$Date_Numeric, 
-					                    scores$Team_Home_numeric, 
-					                    scores$Team_Away_numeric,
-
-                                        bat,
-                                        bat_names$ID,
-                                        bat_names$Name_Numeric,  
-                                        bat_names$Team_numeric,
-                                        bat_names$Date_Numeric,
-
-                                        pitch,
-                                        pitch_names$Name_Numeric,  
-                                        pitch_names$Date_Numeric,
-
-                                        pitch_starting,
-                                        pitch_starting_names$ID,
-                                        pitch_starting_names$Name_Numeric,  
-                                        pitch_starting_names$Team_numeric,
-                                        pitch_starting_names$Date_Numeric,                                        
-
-                                        pitch_relief,
-                                        pitch_relief_names$ID,
-                                        pitch_relief_names$Name_Numeric,  
-                                        pitch_relief_names$Team_numeric,
-                                        pitch_relief_names$Date_Numeric)
-
+ncols <- (ncol(bat) + ncol(pitch) - 2)*2
+weight_indices <- c(which(colnames(bat) == "PA"), which(colnames(pitch) == "IP"))
 
 
 
@@ -379,18 +242,26 @@ fit_all_IDs <- function(scores,
 
 
 
-average_frame <-    fit_all_IDs(scores, 
+average_frame <-   fit_all_IDs(scores, 
 								bat, bat_names, 
 								pitch, pitch_names, 
 								pitch_starting, pitch_starting_names,
 								pitch_relief, pitch_relief_names,
-								c(2,1),
+								weight_indices,
 								n,
-								38*4,
+								ncols,
 								ncores)
 
 
+#####################################################
+#####################################################
+
 path_save <- paste(path, "/MLB_Modeling/Regression/", n, "/R_regression_matrix.rds", sep = "")
 saveRDS(average_frame, path_save)
+
+
+#####################################################
+################ Compute Frame  #####################
+#####################################################
 
 
