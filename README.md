@@ -55,7 +55,7 @@ In order to compute the batting statistics, the last-n-days averages of each pla
 
 Starting pitchers statistics are based of the last **2n** days averages, as they tend to participate in fewer games compared to batters. Additionnaly, a last **n** days averages of the relief pitcher are computed, then added to the starting pitcher's via a weighted average based off their respective innings pitched (IP). Consequently, starting pitchers with few IPs are less impactful, and all column statistics are now ratios of themselves versus total IPs. (I.e.: strikes (SO) are now strikes per inning pitcher (SO / IP) ).
 
-Computing these statistics would take hours using R or Python. Thus, RCPP was used to run the computations using C++, alongside parallel processing if need be. The RCPP code is located in the [1_RCPP.cpp file](https://github.com/frankfredj/MLB_Betting/blob/master/1_RCPP.cpp), whereas the routine to compute the home-versus-away statistics dataframe is located in the [1_Fast_Averages_in_RCPP.R file](https://github.com/frankfredj/MLB_Betting/blob/master/1_Fast_Averages_in_RCPP.R).
+Computing these statistics would take hours using R or Python. Thus, RCPP was used to run the computations using C++, alongside parallel processing if need be. The RCPP code is located in the [1.1_RCPP.cpp file](https://github.com/frankfredj/MLB_Betting/blob/master/1.1_RCPP.cpp), whereas the routine to compute the home-versus-away statistics dataframe is located in the [1.2_Fast_Averages_in_RCPP.R file](https://github.com/frankfredj/MLB_Betting/blob/master/1.2_Fast_Averages_in_RCPP.R).
 
 
 ## Outlier removal
