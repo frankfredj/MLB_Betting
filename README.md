@@ -70,7 +70,7 @@ Vectors of average values computed with the functions above sometime contain gro
 
 Here's an example of the before and after result of trimming with knn: <br/>
 
-![](https://i.imgur.com/cqibFfe.png) <br/>
+![](https://i.imgur.com/3ZvSxfM.png) <br/>
 
 
 In total, 126 rows out of a total of 21 018 had to be removed due to the presence of gross outliers within their respective column, which translates to a 0.6% removal rate.
