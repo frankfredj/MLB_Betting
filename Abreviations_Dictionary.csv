@@ -1,0 +1,37 @@
+Abr,Full,City,City.full,City.Weath.Station.Code,State,Country,mlb_abr,Nickname,Abr_2,FanGraphs
+ARI,Arizona Diamondbacks,ARI,phoenix,KPHX,AZ,US,ARI,Diamondbacks,ARI,Diamondbacks
+ATL,Atlanta Braves,ATL,atlanta,KATL,GA,US,ATL,Braves,ATL,Braves
+BAL,Baltimore Orioles,BAL,baltimore,KBWI,MD,US,BAL,Orioles,BAL,Orioles
+BOS,Boston Red Sox,BOS,Boston,KBOS,MA,US,BOS,Red Sox,BOS,Red Sox
+CUB,Chicago Cubs,CHN,chicago,KMDW,IL,US,CHC,Cubs,CUB,Cubs
+CHW,Chicago White Sox,CHA,chicago,KMDW,IL,US,CWS,White Sox,CHW,White Sox
+CIN,Cincinnati Reds,CIN,florence,KCVG,KY,US,CIN,Reds,CIN,Reds
+CLE,Cleveland Indians,CLE,cleveland,KCLE,oh,US,CLE,Indians,CLE,Indians
+COL,Colorado Rockies,COL,denver,KDEN,co,US,COL,Rockies,COL,Rockies
+DET,Detroit Tigers,DET,detroit,KDET,mi,US,DET,Tigers,DET,Tigers
+HOU,Houston Astros,HOU,houston,KHOU,tx,US,HOU,Astros,HOU,Astros
+KCR,Kansas City Royals,KCA,kansas-city,KMCI,mo,US,KC,Royals,KAN,Royals
+LAA,LA Angels of Anaheim,ANA,anaheim,KSNA,ca,US,LAA,Angels,LAA,Angels
+LAA,Los Angeles Angels,ANA,anaheim,KSNA,ca,US,LAA,Angels,LAA,Angels
+LAD,Los Angeles Dodgers,LAN,los-angeles,KBUR,ca,US,LAD,Dodgers,LOS,Dodgers
+MIA,Miami Marlins,MIA,miami,KMIA,fl,US,MIA,Marlins,MIA,Marlins
+MIL,Milwaukee Brewers,MIL,milwaukee,KMKE,wi,US,MIL,Brewers,MIL,Brewers
+MIN,Minnesota Twins,MIN,minneapolis,KMSP,mn,US,MIN,Twins,MIN,Twins
+NYM,New York Mets,NYN,new-york-city,KLGA,ny,US,NYM,Mets,NYM,Mets
+NYY,New York Yankees,NYA,new-york-city,KLGA,ny,US,NYY,Yankees,NYY,Yankees
+OAK,Oakland Athletics,OAK,oakland,KOAK,ca,US,OAK,Athletics,OAK,Athletics
+PHI,Philadelphia Phillies,PHI,philadelphia,KPHL,pa,US,PHI,Phillies,PHI,Phillies
+PIT,Pittsburgh Pirates,PIT,pittsburgh,KPIT,pa,US,PIT,Pirates,PIT,Pirates
+SDP,San Diego Padres,SDN,san-diego,KSAN,ca,US,SD,Padres,SDG,Padres
+SEA,Seattle Mariners,SEA,seattle,KSEA,wa,US,SEA,Mariners,SEA,Mariners
+SFG,San Francisco Giants,SFN,san-francisco,KSFO,ca,US,SF,Giants,SFO,Giants
+STL,St. Louis Cardinals,SLN,st.-louis,KSTL,mo,US,STL,Cardinals,STL,Cardinals
+STL,St.Louis Cardinals,SLN,st.-louis,KSTL,mo,US,STL,Cardinals,STL,Cardinals
+TBR,Tampa Bay Rays,TBA,st.-petersburg,KPIE,fl,US,TB,Rays,TAM,Rays
+TEX,Texas Rangers,TEX,arlington,KDFW,tx,US,TEX,Rangers,TEX,Rangers
+TOR,Toronto Blue Jays,TOR,toronto,CYTZ,ca,CA,TOR,Blue Jays,TOR,Blue Jays
+WSN,Washington Nationals,WAS,washington,KDCA,dc,US,WSH,Nationals,WAS,Nationals
+MIA,Florida Marlins,MIA,miami,KMIA,fl,US,MIA,Marlins,MIA,Marlins
+TBR,Tampa Bay Devil Rays,TBA,st.-petersburg,KPIE,fl,US,TB,Rays,TBR,Rays
+FLA,Florida Marlins,MIA,miami,KMIA,fl,US,MIA,Marlins,FLA,Marlins
+TBD,Tampa Bay Devil Rays,TBA,st.-petersburg,KPIE,fl,US,TB,Rays,TBD,Rays
