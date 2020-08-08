@@ -5,10 +5,6 @@
 #include <numeric>
 // [[Rcpp::depends(RcppArmadillo)]]
 
-
-
-/////////////////////////////////// Functions and sub-functions for running MCMC ///////////////////////////////////
-
 // [[Rcpp::export]]
 Rcpp::List fastLm(const arma::mat& X, const arma::colvec& y) {
     int n = X.n_rows, k = X.n_cols;
@@ -285,17 +281,6 @@ arma::mat Constrained_MCMC_parallel(const arma::mat& SortedPrComp, const arma::m
   return out * L.t();
 
 }
-
-
-
-
-
-/////////////////////////////////// Functions and sub-functions for computing averages ///////////////////////////////////
-
-
-
-
-
 
 
 
