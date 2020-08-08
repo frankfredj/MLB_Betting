@@ -58,7 +58,7 @@ Starting pitchers statistics are based of the last **2n** days averages, as they
 Computing these statistics would take hours using R or Python. Thus, RCPP was used to run the computations using C++, alongside parallel processing if need be. The RCPP code is located in the [1.1_RCPP.cpp file](https://github.com/frankfredj/MLB_Betting/blob/master/1.1_RCPP.cpp), whereas the routine to compute the home-versus-away statistics dataframe is located in the [1.2_Fast_Averages_in_RCPP.R file](https://github.com/frankfredj/MLB_Betting/blob/master/1.2_Fast_Averages_in_RCPP.R).
 
 
-## Outlier removal
+## Outlier removal and Sabermetrics
 
 ###### Note: The data used throughout the remainder of this text was obtained with box-scores from 2010 to 2020, using last_n_days = 25. 
 
@@ -73,7 +73,9 @@ Here's an example of the before and after result of trimming with knn: <br/>
 ![](https://i.imgur.com/3ZvSxfM.png) <br/>
 
 
-In total, 126 rows out of a total of 21 018 had to be removed due to the presence of gross outliers within their respective column, which translates to a 0.6% removal rate.
+In total, 126 rows out of a total of 21 018 had to be removed due to the presence of gross outliers within their respective column, which translates to a 0.6% removal rate. Once the data has been cleaned, sabermetrics are computed via the code within the [3_Adding_Sabermetrics_to_CPP_data.R](https://github.com/frankfredj/MLB_Betting/blob/master/3_Adding_Sabermetrics_to_CPP_data.R) file.
+
+
 
 
 
