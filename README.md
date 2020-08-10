@@ -77,20 +77,45 @@ In total, 126 rows out of a total of 21 018 had to be removed due to the presenc
 
 
 
-## Data stationarity and Feature Selection
+## Feature Selection and models fitting
 
-Since our data consists in a multitude of time series, stationarity isn't guaranteed for each predictor. A simple fix is to work with the differences between the home team's and the visiting team's respective statistics. They should both have the same trend, thus their differences should be stationary. Once this is done, **L1-penalized logistic regression** and **R's Boruta package** are used as feature-selection tools. A correlation heatmap of the union and intersection of both sets of retained features is shown below.
+In order to avoid overfitting, highly correlated variables were trimmed out (ρ > 0.8), then feature selection was done with L1-penalized logistic regression and the Boruta R package. The intersection of both sets of retained variables was used as our final pick. A heatmap of the retained predictors is show below. <br/>
 
-![](https://i.imgur.com/MISv0db.png) <br/>
-![](https://i.imgur.com/lqPA3VE.png) <br/>
+![](https://i.imgur.com/ygtLH8z.png) <br/>
 
-The union of both sets of retained features contains a high amount of strongly-correlated predictors. Caret's **findCorrelation** function with its **cutoff** argument set to 0.75 was used to weed-out possibly-redundant features, yielding the final result:
+Model fitting was done using the mlrMBO, Caret and Keras packages. The first 13 651 matches were used as the training set, whereas the last 4133 ones were used as the validation set. (Log-loss was used as our scoring metric.) A heatmap of the out-of-folds predicted odds of winning (for the home team) is shown below. <br/>
 
-![](https://i.imgur.com/ZHbYf3N.png)
-![](https://i.imgur.com/IlBvjJ7.png)
+![](https://i.imgur.com/lmHNIYR.png) <br/>
 
-The final retained features have low inter-correlations, and means close to zero. 
+Highly correlated models (ρ > 0.95) are recursively removed based on their respective log-loss values, yielding the following retained models: <br/>
 
+![](https://i.imgur.com/sAPTPKC.png) <br/>
+
+Additionaly, a single hidden-layer neural network with dimensions [24, 36, 2] and dropout rate of 0.5 (hidden layer only) was trained using Keras, then added to the models list. The training process with 50 epochs (batch sizes = 10) is shown below. <br/>
+
+![](https://i.imgur.com/If4PyIL.png) <br/>
+
+
+## Meta model
+
+The average model output is used as our final predictor. The log-loss on the testing set is 0.664, and the AUROC is 0.628. The ROC plot and the confusion matrix are shown below. <br/>
+
+![](https://i.imgur.com/UNnZENi.png) <br/>
+![](https://i.imgur.com/3XHRIVA.png) <br/>
+
+
+## Betting against moneylines
+
+Two strategies are considered: simple arbitrage, and Kelly-Criterion betting. 
+
+#### Simple arbitrage
+
+Bets are placed on teams where the moneylines projected odds of winning are inferior to our model's.
+
+![](https://i.imgur.com/s1M3buH.png) <br/>
+
+
+#### Kelly betting
 
 
 
