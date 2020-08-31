@@ -47,6 +47,15 @@ scrapper.Build_Filling_Pitchers_Database()
 ```
 
 
+## Modeling
+
+Modeling is done using a routine that computes the rolling averages over the last 30 days, over a selected subset of metrics judged to be relevant. The database is updated daily, and betting opportunities are taken from [Loto-Quebec's "Mise-O-Jeu" website](https://miseojeu.espacejeux.com/en/home) . Lineups predictions from [Rotowire](https://www.rotowire.com/baseball/daily-lineups.php) are used in conjunction with the database to construct the latest rolling averages, before feeding the data to the model. Bets are then made on options with over-evaluated returns.
+
+Implementation started on 2020-08-30, and the most recent performance are:
+
+![](https://i.imgur.com/5Q2Z9cP.png)
+
+
 
 
 
