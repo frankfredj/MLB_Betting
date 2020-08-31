@@ -1,6 +1,6 @@
 ## Data Mining
 
-Box-scores are extracted from https://www.fangraphs.com/ and saved as CSV files via the following process:
+Box-scores are extracted from [FanGraphs' website](https://www.fangraphs.com/) and saved as CSV files via the following process:
 
 ```python
 #1. Initialise a Baseball_Scrapper object with a provided path where the files will be stored. 
