@@ -51,6 +51,8 @@ scrapper.Build_Filling_Pitchers_Database()
 
 Modeling is done using a routine that computes the rolling averages over the last 30 days, over a selected subset of metrics judged to be relevant. The database is updated daily, and betting opportunities are taken from [Loto-Quebec's "Mise-O-Jeu" website](https://miseojeu.espacejeux.com/en/home) . Lineups predictions from [Rotowire](https://www.rotowire.com/baseball/daily-lineups.php) are used in conjunction with the database to construct the latest rolling averages, before feeding the data to the model. Bets are then made on options with over-evaluated returns.
 
+Predictions are posted on [the mlbArbitrage subReddit](https://old.reddit.com/r/mlbArbitrage/) before matches start. The top frame contains the Cities, LotoQc Returns and Model Returns arranged in {Home, Visitor} order. The second frame containes the names of the teams that were betted on, the differences in returns and the number of batters that weren't found in the database. (Players are only evaluated with respect to their performance whilst playing for their current team, which means the player's stats will be unavaible after a trade has occured, up until he plays at least once for his new team.)
+
 Implementation started on 2020-08-30, and the most recent performance are:
 
 ![](https://i.imgur.com/5Q2Z9cP.png)
