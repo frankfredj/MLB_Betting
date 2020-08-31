@@ -269,7 +269,7 @@ class Baseball_Scrapper:
 
 
 			#Saving procedure (trigerred every 20 iterations)
-			if i % 20 == 0 or begin == end:
+			if (i + 1) % 20 == 0 or begin == end:
 
 				self.update_file(self.paths[-1], "Game_URLs.csv", urls)
 				urls = pd.DataFrame(columns = ["URL"])
@@ -439,7 +439,7 @@ class Baseball_Scrapper:
 
 				#print(scores)
 
-				if count % 20 == 0 or url == urls[-1]:
+				if (count + 1) % 20 == 0 or url == urls[-1]:
 
 					self.update_file(self.paths[0], "FanGraphs_Box_Scores.csv", bat)	
 					bat = []
@@ -473,10 +473,11 @@ class Baseball_Scrapper:
 		if not path.exists(path_check):
 			sys.exit("Missing file:" + "\t" + path_check)
 
-		frm = pd.read_csv(path_check)["Date"].sort_values("Date",ascending=False)["Date"]
-		n = len(frm)
-		frm = frm[0]
-		to = datetime.strftime(to, "%Y-%m-%d")
+		temp = pd.read_csv(path_check)
+		n = len(temp)
+
+		frm = temp["Date"].max()
+		to = datetime.strftime(datetime.now(), "%Y-%m-%d")
 
 		self.Get_FanGraphs_Game_URLs(frm, to)
 		self.Extract_FanGraphs_Box_Scores()
@@ -987,496 +988,1036 @@ class Baseball_Scrapper:
 		frame.to_csv(self.paths[1] + "/Clean_Data/FanGraphs_Box_Scores_SP.csv", index = False)
 
 
+	##############################################################################
+	#################### PREDICTED LINEUPS AND MONEYLINES  #######################
+	##############################################################################
 
+	def Scrape_Predicted_Lineups(self):
 
-	#################################################################################
-	#################### MATCH STATS AVERAGE QUERY FUNCTION  ########################
-	#################################################################################
+		headers = {
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
+    	}
 
+		date = datetime.strftime(datetime.now(), "%Y-%m-%d")
 
-	#Calculate average statistics given a list of per-game statistics of a rooster
-	def Combine_Players_BAT(self, frame, scale):
+		print("Accessing https://www.lineups.com/mlb/lineups ...")
 
-		to_sum = ["BO", "PA", "H", "HR", "R", "RBI", "BB", "SO", "IBB", 
-					"1B", "2B", "3B", "HBP", "SF", "SH", "GDP", "SB", "CS",
-						"GB", "FB", "LD", "IFFB", "IFH", "BU", "BUH", "Balls",
-							"Strikes", "Pitches", "WPA", "WPA_plus", "WPA_minus", "PH",
-								"pLI", "AB", "wRC+", "Spd", "wSB", "wRC", "RE24"]
+		#Extract projected roosters
+		html = requests.get("https://www.lineups.com/mlb/lineups" , stream = True, headers = headers).content
+		tables = pd.read_html(html)
+		soup = BeautifulSoup(html)
 
-		summed_stats = pd.DataFrame(frame[to_sum].sum()).transpose()
 
-		summed_stats["LI"] =  ((frame["WPA"] / frame["WPA/LI"]).replace([np.inf, -np.inf], np.nan)).sum()
-		summed_stats["BIP"] =  summed_stats["AB"] - summed_stats["SO"] - summed_stats["HR"] + summed_stats["SF"]
+		print("Extracting tables ...")
+		#Extract full player names
+		players_hrefs = soup.find_all("a", class_ = "link-black-underline")
+		players = []
+		family_names = []
+		for element in players_hrefs:
+			if "player-stats" in element["href"]:
 
-		wOBA_divisors = frame["AB"] + frame["BB"] - frame["IBB"] + frame["SF"] + frame["HBP"]
-		summed_stats["wOBA"] = (frame["wOBA"] * wOBA_divisors).sum() / wOBA_divisors.sum()
+				temp = element["href"].split("/")[-1].split("-")
+				out = ""
+				for x in temp:
+					out = out + x.capitalize()
 
-		summed_stats["BB%"] = summed_stats["BB"] / summed_stats["PA"]
-		summed_stats["SO%"] = summed_stats["SO"] / summed_stats["PA"]
+				players.append(out)
 
-		summed_stats["ISO"] = (summed_stats["2B"] + 2*summed_stats["3B"] + 3*summed_stats["HR"]) / summed_stats["AB"]
-		summed_stats["BABIP"] = (summed_stats["H"] - summed_stats["HR"]) / (summed_stats["AB"] - summed_stats["SO"] - summed_stats["HR"] + summed_stats["SF"])
-		summed_stats["OBP"] = (summed_stats["H"] + summed_stats["BB"] + summed_stats["HBP"]) / (summed_stats["AB"] + summed_stats["BB"] + summed_stats["HBP"] + summed_stats["SF"])
-		summed_stats["SLG"] = (summed_stats["1B"] + 2*summed_stats["2B"] + 3*summed_stats["3B"] + 4*summed_stats["HR"]) / summed_stats["AB"]
+				if temp[-1].capitalize() == "Jr":
+					family_names.append(temp[-2].capitalize() + temp[-1].capitalize())
+				else:
+					family_names.append(temp[-1].capitalize())
 
-		summed_stats["BB/SO"] = summed_stats["BB"] / summed_stats["SO"]
-		summed_stats["OPS"] = summed_stats["OBP"] + summed_stats["SLG"]
 
-		summed_stats["wRAA"] = (frame["wRAA"] * frame["PA"]).sum() / summed_stats["PA"]
-		summed_stats["GB/FB"] = summed_stats["GB"] / summed_stats["FB"]
+		family_names = np.array(family_names)
 
-		summed_stats["LD%"] = summed_stats["LD"] / summed_stats["BIP"]
-		summed_stats["FB%"] = summed_stats["FB"] / summed_stats["BIP"]
-		summed_stats["GB%"] = summed_stats["GB"] / summed_stats["BIP"]
-		summed_stats["IFFB%"] = summed_stats["IFFB"] / summed_stats["FB"]
+		#Extract moneylines
+		moneylines = soup.find_all("div", class_ = "lineup-foot-stat-col")
 
-		summed_stats["HR/FB"] = summed_stats["HR"] / summed_stats["FB"]
-		summed_stats["IFH%"] = summed_stats["IFH"] / summed_stats["GB"]
+		#Extract the date
+		temp = soup.find("span", class_ = "hidden-xs-down").text.split(" ")[-1].split("/")
+		for i in range(0, len(temp)):
+			if len(temp[i]) == 1:
+				temp[i] = "0" + temp[i]
+		date = str(2000 + int(temp[2])) + "-" + temp[0] + "-" + temp[1]
 
-		temp = frame["BUH%"].copy()
-		fix = np.where(temp == 0)[0]
-		if len(fix) > 0:
-		    temp.iloc[fix] = 1
 
-		summed_stats["BUH%"] = summed_stats["BUH"] / ((1 / temp) * frame["BUH"]).sum()
-		summed_stats["REW"] = summed_stats["RE24"] / (frame["RE24"] / frame["REW"]).sum()
 
-		summed_stats["WPA/LI"] = summed_stats["WPA"] / summed_stats["LI"]
-		summed_stats["WPA/pLI"] = summed_stats["WPA"] / summed_stats["pLI"]
-		summed_stats["Clutch"] = summed_stats["WPA/LI"] - summed_stats["WPA/pLI"]
+		#Build tables in loop
+		bat = []
+		pitch = []
+		teams = []
 
-		summed_stats = summed_stats.fillna(0)
+		print("Formating tables ...")
 
-		if scale:
+		n = int(len(tables) / 2)
+		for i in range(0, n):
 
-			to_sum = to_sum + ["LI", "BIP"]
-			summed_stats[to_sum] = summed_stats[to_sum] / len(frame)
+			#Get batters
+			batters = pd.DataFrame(tables[2*i]).iloc[:,0].copy()
+			for j in range(0, len(batters)):
+				batters[j] = batters[j].split(str(j+1) + ".")[1].split(",")[0].replace(" ", "")
+				k = int(len(batters[j])/2)
+				batters[j] = batters[j][0:k]
 
-		return summed_stats.replace([np.inf, -np.inf], np.nan).fillna(0)
+			batters = pd.DataFrame(batters)
 
+			team_temp = batters.columns[0].replace("Hitters", "").strip()
+			teams.append(team_temp)
 
+			batters.columns = ["Abreviated_Name"]
+			batters["Full_Name"] = ""
 
-	def Combine_Players_PITCH(self, frame, scale):
+			#Jr. bug fix
+			fam = batters["Abreviated_Name"].str.split(".", expand = True)
+			if None in list(fam.iloc[:,-1]):
+				fam.drop(fam.columns[len(fam.columns) - 1], axis = 1, inplace = True)
 
-		to_sum = ["IP", "TBF", "H", "HR", "ER", "BB", "SO", "pLI", "BS",
-					"GS", "G", "CG", "ShO", "SV", "HLD", "R", "IBB", "IFH",
-						"HBP", "WP", "BK", "WPA", "LD", "FB", "GB", "BUH", "tERA",
-							"IFFB", "BU", "RS", "Balls", "Strikes", "Pitches",
-								"WPA_plus", "WPA_minus", "RE24", "inLI", "gmLI", "exLI"]		
 
-		summed_stats = pd.DataFrame(frame[to_sum].sum()).transpose()
-		summed_stats["BIP"] =  (round(1 / frame["BABIP"] * (frame["H"] - frame["HR"]))).sum()
-		summed_stats["LI"] =  ((frame["WPA"] / frame["WPA/LI"]).replace([np.inf, -np.inf], np.nan)).sum()
+			batters["Family_Name"] = list(fam.iloc[:,-1])
 
+			#Get full names
+			for j in range(0, len(batters)):
+				index = np.where(family_names == batters.at[j, "Family_Name"])[0]
 
-		#fip_constant = (frame["FIP"] - (13*frame["HR"] + 3*(frame["BB"] + frame["HBP"]) - 2*frame["SO"]) / frame["IP"]).mean()
-		#summed_stats["FIP"] = (13*summed_stats["HR"] + 3*(summed_stats["BB"] + summed_stats["HBP"]) - 2*summed_stats["SO"]) / summed_stats["IP"] + fip_constant
-		summed_stats["FIP"] = (13*summed_stats["HR"] + 3*(summed_stats["BB"] + summed_stats["HBP"]) - 2*summed_stats["SO"]) / summed_stats["IP"]
+				if len(index) > 0:
+					m = int(index[0])
+					batters.at[j, "Full_Name"] = players[m]
+					family_names = np.delete(family_names, m)
+					players = np.delete(players, m)
 
-		summed_stats["xFIP"] = summed_stats["FIP"] + (frame["FIP"] - frame["xFIP"]).mean()
 
-		try:
-			dFip_minus_over_dFip = round((frame["FIP-"].diff() / frame["FIP"].diff()).mean())
 
-		except:
-			dFip_minus_over_dFip = 22
+			batters["Team"] = team_temp
 
-		beta_1 = (frame["FIP-"] - dFip_minus_over_dFip*frame["FIP"]).mean()
-		summed_stats["FIP-"] = beta_1 + dFip_minus_over_dFip * summed_stats["FIP"] 
+			pitchers = pd.DataFrame(tables[2*i + 1]).iloc[0,0].split("  ")[0].replace(" ", "")
+			pitchers = pd.DataFrame([pitchers], columns = ["Abreviated_Name"])
 
+			#Jr. bug fix
+			fam = pitchers["Abreviated_Name"].str.split(".", expand = True)
+			if None in list(fam.iloc[:,-1]):
+				fam.drop(fam.columns[len(fam.columns) - 1], axis = 1, inplace = True)	
 
-		summed_stats["K/9"] = 9 * summed_stats["SO"] / summed_stats["IP"]
-		summed_stats["BB/9"] = 9 * summed_stats["BB"] / summed_stats["IP"]
-		summed_stats["HR/9"] = 9 * summed_stats["HR"] / summed_stats["IP"]
 
-		summed_stats["K/BB"] = summed_stats["K/9"] / summed_stats["BB/9"]
+			pitchers["Family_Name"] = list(fam.iloc[:,-1])
+			pitchers["Full_Name"] = ""
 
-		summed_stats["HR/FB"] = summed_stats["HR"] / summed_stats["FB"]
+			index = np.where(family_names == pitchers.at[0, "Family_Name"])[0]
+			if len(index) > 0:
+				m = int(index[0])
+				pitchers.at[0, "Full_Name"] = players[m]
+				family_names = np.delete(family_names, m)
+				players = np.delete(players, m)
 
-		summed_stats["ERA"] = 9*summed_stats["ER"] / summed_stats["IP"]
+			pitchers["Team"] = team_temp
 
-		summed_stats["BABIP"] = (summed_stats["H"] - summed_stats["HR"]) / summed_stats["BIP"]
+			if len(bat) == 0:
+				bat = batters
+			else:
+				bat = bat.append(batters,  ignore_index = True)
 
-		summed_stats["LOB%"] = (summed_stats["H"] + summed_stats["BB"] + summed_stats["HBP"] - summed_stats["R"]) / (summed_stats["H"] + summed_stats["BB"] + summed_stats["HBP"] - 1.4*summed_stats["HR"])
-		
-		summed_stats["LD%"] = summed_stats["LD"] / summed_stats["BIP"]
-		summed_stats["FB%"] = summed_stats["FB"] / summed_stats["BIP"]
-		summed_stats["GB%"] = summed_stats["GB"] / summed_stats["BIP"]
-		
-		summed_stats["BB%"] = summed_stats["BB"] / summed_stats["TBF"]
-		summed_stats["K%"] = summed_stats["SO"] / summed_stats["TBF"]
-		summed_stats["K-BB%"] = summed_stats["K%"] - summed_stats["BB%"]
+			if len(pitch) == 0:
+				pitch = pitchers
+			else:
+				pitch = pitch.append(pitchers,  ignore_index = True)
 
-		summed_stats["IFFB%"] = summed_stats["IFFB"] / summed_stats["FB"]
-		summed_stats["IFH%"] = summed_stats["IFH"] / summed_stats["GB"]
-		summed_stats["BUH%"] = summed_stats["BUH"] / summed_stats["BU"]
 
-		summed_stats["HR/FB"] = summed_stats["HR"] / summed_stats["FB"]
-		summed_stats["ERA"] = 9*summed_stats["ER"] / summed_stats["IP"]
 
-		summed_stats["WPA/LI"] = summed_stats["WPA"] / summed_stats["LI"]
-		summed_stats["WPA/pLI"] = summed_stats["WPA"] / summed_stats["pLI"]
-		summed_stats["Clutch"] = summed_stats["WPA/LI"] - summed_stats["WPA/pLI"]		
+		teams = np.array(teams)
 
-		summed_stats["LOB%"] = (summed_stats["H"] + summed_stats["BB"] + summed_stats["HBP"] - summed_stats["R"]) / (summed_stats["H"] + summed_stats["BB"] + summed_stats["HBP"] - 1.4 * summed_stats["HR"])
+		#Extract moneyline odds 
+		current_moneylines = []
 
-		if scale:
+		for i in range(0, int(len(moneylines)/4)):
 
-			to_sum = to_sum + ["LI", "BIP"]
-			summed_stats[to_sum] = summed_stats[to_sum] / len(frame)
+			temp = moneylines[4*i].find_all("p", class_ = "foot-stat-value")
 
-		return summed_stats.replace([np.inf, -np.inf], np.nan).fillna(0)
+			for j in range(0,2):
+				try:
+					current_moneylines.append(int(temp[j].find_all("span")[0].text))
+				except:
+					current_moneylines.append(100)
 
+		current_moneylines = np.array(current_moneylines)
 
-	def Compute_Seasonal_Averages(self):
 
-		path_check = self.paths[0].split("/Bat")[0] + "/Regression"
-		if not path.exists(path_check):
-			os.mkdir(path_check)
-			print("Created directory at:" + "\t" + path_check)
 
-		frames = []
-		for i in range(0, 2):
-			path_check = self.paths[i] + "/Clean_Data/FanGraphs_Box_Scores.csv"
-			if not path.exists(path_check):
-				sys.exit("Missing file at:" + "\t" + path_check)
+		#Combine betting data
+		index_home = np.array(list(range(1,len(teams),2))).astype(int)
+		index_away = np.array(list(range(0,len(teams),2))).astype(int)
 
-			frames.append(pd.read_csv(path_check))	
 
-		path_check = self.paths[2] + "/Clean_Data/FanGraphs_Scores.csv"
-		if not path.exists(path_check):
-			os.mkdir(path_check)
-			print("Created directory at:" + "\t" + path_check)
+		betting = pd.DataFrame(np.transpose([teams[index_home], 
+								current_moneylines[index_home], 
+								teams[index_away], 
+								current_moneylines[index_away]]),
+								columns = ["Team_Home", "MoneyLine_Home", "Team_Away", "MoneyLine_Away"])
 
-		scores = pd.read_csv(path_check)
+		betting["Odds_Home"] = 1/2
+		betting["Odds_Away"] = 1/2
 
+		betting["MoneyLine_Home"] = betting["MoneyLine_Home"].astype(int)
+		betting["MoneyLine_Away"] = betting["MoneyLine_Away"].astype(int)
 
-		years = scores["Date"].str[:4].astype("int")
-		seasons = np.sort(list(set(list(years))))
-		teams = list(set(list(scores["Team_Home"])))
+		for i in range(0, len(betting)):
 
-		averages_bat = []
-		averages_pitch = []
-
-		for season in seasons:
-
-			temp_bat = []
-			temp_pitch = []
-
-			temp = np.where(years == season)[0]
-
-			ids = scores.loc[temp, "ID"].copy().reset_index(drop = True)
-			teams_home = scores.loc[temp, "Team_Home"].copy().reset_index(drop = True)
-
-
-			for team in tqdm(teams):
-
-				ids_home = ids[np.where(teams_home == team)[0]]
-
-				for i in range(0,2):
-
-					index = np.where(np.isin(frames[i]["ID"], ids_home))[0]
-
-					if i == 0:
-						temp_bat.append(self.Combine_Players_BAT(frames[i].iloc[index], True))
-
-					else:
-						temp_pitch.append(self.Combine_Players_PITCH(frames[i].iloc[index], True))
-
-
-			temp_bat = pd.concat(temp_bat)
-			temp_pitch = pd.concat(temp_pitch)
-
-			temp = [temp_bat, temp_pitch]
-			for i in range(0, 2):
-				temp[i]["Season"] = season
-				temp[i]["Team"] = teams
-
-			averages_bat.append(temp[0])
-			averages_pitch.append(temp[1])
-
-
-		averages_bat = pd.concat(averages_bat)
-		averages_bat = averages_bat.reset_index(drop = True)
-
-		averages_pitch = pd.concat(averages_pitch)
-		averages_pitch = averages_pitch.reset_index(drop = True)
-		
-		path_save = self.paths[0].split("/Bat")[0] + "/Regression"
-
-		averages_bat.to_csv(path_save + "/Seasonal_Averages_Bat.csv", index = False)
-		averages_pitch.to_csv(path_save + "/Seasonal_Averages_Pitch.csv", index = False)
-
-
-
-	def Query_X_row(self, pitcher_home, batters_home, pitcher_away, batters_away, date, last_n_days, at_location, bat, pitch, pitchSP):
-
-		location = ["Home", "Away"]
-		batters = [batters_home, batters_away]
-		pitchers = [pitcher_home, pitcher_away]
-		pitcher_fillers = [["ReliefPitcher" + pitcher_home[0][-3:]], ["ReliefPitcher" + pitcher_away[0][-3:]]]
-
-		out = []
-		for i in range(0,2):
-
-			#Retrieve batters with a time-filter (last_n_days)
-			index_bat = np.where(bat["Name"].isin(batters[i]))[0]
-			if len(index_bat) == 0:
-				sys.exit("Error: No batters found..")				
-
-			dates = pd.to_datetime(bat["Date"][index_bat].copy())
-			to = pd.to_datetime(date) - timedelta(days = 1)
-			frm = pd.to_datetime(date) - timedelta(days = last_n_days)
-
-			index_bat = index_bat[np.where((dates > frm) & (dates <= to))[0]]
-			if len(index_bat) < (4 * len(batters[i])):
-				sys.exit("Error: No enough matches found for batters.")			
-
-			bat_temp = bat.iloc[index_bat].copy().reset_index(drop = True)
-
-			#Minimum n = 4 * number of batters queried
-			if location == True:
-				index = np.where(bat_temp["Location"] == location[i])[0]
-				if len(index) < (4 * len(batters[i])):
-					sys.exit("Error: Not enough matches played by batters at " + location[i] + ".")
-
-				bat_temp = bat_temp.iloc[index].reset_index(drop = True)
-
-
-			#Compute individual averages
-			overall_rows = [] 
-			for name in batters[i]:
-
-				index = np.where(bat_temp["Name"] == name)[0]
-				if len(index) == 0:
-					continue
-
-				overall_rows.append(self.Combine_Players_BAT(bat_temp.iloc[index], scale = True))
-
-			#At least 6 batters must be found within the database to proceed
-			if len(overall_rows) <= 6:
-				sys.exit("Error: Not enough batters found.")
-
-			#Compute the average of the individual averages
-			#(Individuals with few matches played won't be penalized)
-			overall_bat = self.Combine_Players_BAT(pd.concat(overall_rows), scale = True) 
-			cnames = list(overall_bat.columns)
-			for j in range(0, len(cnames)):
-
-				cnames[j] = cnames[j].replace("%", "_Percent") + "_Bat_" + location[i] 
-
-			overall_bat.columns = cnames
-
-
-			#Retrieve the starting picher with a time-filter (last_2n_days)
-			index_pitch = np.where(pitch["Name"].isin(pitchers[i]))[0]
-			if len(index_pitch) == 0:
-				sys.exit("Error: No pitchers found.")				
-
-			dates = pd.to_datetime(pitch["Date"][index_pitch].copy())
-
-			#Minimum n = 1
-			frm = pd.to_datetime(date) - timedelta(days = 2*last_n_days)
-			index_pitch = index_pitch[np.where((dates > frm) & (dates <= to))[0]]
-			if len(index_pitch) < 1:
-				sys.exit("Error: Not enough matches found for the pitcher.")				
-
-			pitch_temp = pitch.iloc[index_pitch].copy().reset_index(drop = True)	
-
-			#Attempt to select only matches where the pitcher was starting
-			#Minimum n = 1
-			starting_index = np.where(pitch_temp["Starting"] == "Yes")[0]
-			if len(starting_index) > 0:
-				pitch_temp = pitch.iloc[index_pitch].copy().reset_index(drop = True)
-
-			pitch_overall_starting = self.Combine_Players_PITCH(pitch_temp, scale = True) 
-
-
-			#Retrieve the filling pichers with a time-filter (last_n_days)
-			frm = pd.to_datetime(date) - timedelta(days = last_n_days)
-			index_pitch = np.where(pitchSP["Name"].isin(pitcher_fillers[i]))[0]
-			if len(index_pitch) == 0:
-				sys.exit("Error: No filling pitchers found.")				
-
-			dates = pd.to_datetime(pitch["Date"][index_pitch].copy())
-
-			index_pitch = index_pitch[np.where((dates > frm) & (dates <= to))[0]]
-			if len(index_pitch) == 0:
-				sys.exit("Error: No filling pitchers found within date range.")				
+			if betting.at[i, "MoneyLine_Home"] >= 0:
+				R = (100 + betting.at[i, "MoneyLine_Home"]) / 100
+			else:
+				R = -(100 - betting.at[i, "MoneyLine_Home"]) / betting.at[i, "MoneyLine_Home"]
 				
+			betting.at[i, "Odds_Home"] = 1/R
 
-			#Compute unscalled averages of filling pitchers per match	
-			pitch_temp = pitchSP.iloc[index_pitch].copy().reset_index(drop = True)
-			pitch_fill_rows = []
-			for ID in list(set(list(pitch_temp["ID"]))):
-				index = np.where(pitch_temp["ID"] == ID)[0]
-				pitch_fill_rows.append(self.Combine_Players_PITCH(pitch_temp.iloc[index], scale = False))
-
-			#Combine the unscalled filling pitches averages into a single scaled row
-			pitch_overall_filling = self.Combine_Players_PITCH(pd.concat(pitch_fill_rows), scale = True) 	
-
-			#Compute a weighted average of the starting and filling pitchers
-			#IP_per_game constant was calculated from the 2010 to 2019 seasons as sum(IP) / (2 * number of matches)
-			IP_per_game = 8.425209861450691
-			weight_filler = 1 - pitch_overall_starting["IP"] / IP_per_game
-			IP_filler = weight_filler * IP_per_game
-			scale_filler = float(IP_filler / pitch_overall_filling["IP"])
-
-			#Adjust the filling pitcher frame
-			pitch_overall_filling = scale_filler * pitch_overall_filling
-
-			pitch_overall = pd.concat([pitch_overall_starting, pitch_overall_filling])
-			pitch_overall = self.Combine_Players_PITCH(pitch_overall, scale = True) 
-			cnames = list(pitch_overall.columns)
-			for j in range(0, len(cnames)):
-
-				cnames[j] = cnames[j].replace("%", "_Percent") + "_Pitch_" + location[i] 
-
-			pitch_overall.columns = cnames
-			out.append(pd.concat([overall_bat, pitch_overall], axis=1))
+			if betting.at[i, "MoneyLine_Away"] >= 0:
+				R = (100 + betting.at[i, "MoneyLine_Away"]) / 100
+			else:
+				R = -(100 - betting.at[i, "MoneyLine_Away"]) / betting.at[i, "MoneyLine_Away"]
+				
+			betting.at[i, "Odds_Away"] = 1/R	
 
 
-		return pd.concat(out, axis=1)
+		betting["Returns_Home"] = 1 / betting["Odds_Home"] - 1
+		betting["Returns_Away"] = 1 / betting["Odds_Away"] - 1		
+
+		betting["OverOdds"] = betting["Odds_Home"] + betting["Odds_Away"] - 1
+
+
+		#Add Date
+		bat["Date"] = date
+		pitch["Date"] = date
+		betting["Date"] = date
+
+		bat = self.Fix_Team_Names(bat, "City")
+		pitch = self.Fix_Team_Names(pitch, "City")
+		betting = self.Fix_Team_Names(betting, "City")
 
 
 
+		def find_name(frame, row, all_names):
 
-	##############################################################
-	#################### REGRESSION FRAME  #######################
-	##############################################################
+			dummy = np.char.lower(all_names)
+
+			f_name = str(frame.at[row, "Full_Name"]) + str(frame.at[row, "Team"])
+
+			index = np.where(dummy == f_name.lower())[0]
+
+			if len(index) != 0:
+				return f_name
+
+			p_name = str(frame.at[row, "Family_Name"]) + str(frame.at[row, "Team"])
+			p_name = p_name.lower()
+
+			temp = str(frame.at[row, "Family_Name"])
+			family_name = "".join([x for x in temp if x.isalpha()])
+
+			family_name = family_name.lower()
+			team_name = str(frame.at[row, "Team"]).lower()
+
+			m = []
+			for i in range(0, len(all_names)):
+				temp = "".join([x for x in dummy[i] if x.isalpha()])
+
+				if (family_name in temp) and (team_name in temp):
+					m.append(i) 
+					
+
+			if len(m) == 0:
+				return ""
+
+			out = ""
+
+			for i in m:
+				temp = [x for x in all_names[i][0:len(all_names[i]) - 3] if x.isupper()]
+				initials = temp[0] + "." 
+				abreviated_name = initials + str(frame.at[row, "Family_Name"])
+
+				if abreviated_name[-2:] == "Jr":
+					abreviated_name = abreviated_name + "."
+
+				if abreviated_name == str(frame.at[row, "Abreviated_Name"]):
+					out = all_names[i]
+					break
 
 
-	def Query_from_ID(self, ID, last_n_days, at_location, bat, pitch, pitchSP):
+			if frame.at[row, "Full_Name"] == "KikeHernandez":
+				return "EnriqueHernandez" + str(frame.at[row, "Team"])
 
-		index_bat = np.where(bat["ID"] == ID)[0]
-		index_pitch = np.where(pitch["ID"] == ID)[0]
-		index_pitchSP = np.where(pitchSP["ID"] == ID)[0]
+			if frame.at[row, "Full_Name"] == "A.Toro-Hernandez":
+				return "AbrahamToro" + str(frame.at[row, "Team"])				
 
-		date = str(bat.iloc[index_bat[0]]["Date"])
-
-		home = np.where(bat.iloc[index_bat]["Location"] == "Home")[0]
-		away = np.where(bat.iloc[index_bat]["Location"] == "Away")[0]
-
-		batters_home = list(bat.iloc[index_bat[home]]["Name"])
-		batters_away = list(bat.iloc[index_bat[away]]["Name"])
-
-		home = np.where((pitch.iloc[index_pitch]["Location"] == "Home") & (pitch.iloc[index_pitch]["Starting"] == "Yes"))[0]
-		away = np.where((pitch.iloc[index_pitch]["Location"] == "Away") & (pitch.iloc[index_pitch]["Starting"] == "Yes"))[0]	
-
-		pitcher_home = list(pitch.iloc[index_pitch[home]]["Name"])
-		pitcher_away = list(pitch.iloc[index_pitch[away]]["Name"])
-
-		return self.Query_X_row(pitcher_home, batters_home, pitcher_away, batters_away, date, last_n_days, at_location, bat, pitch, pitchSP)
-	
+			return out
 
 
-	def Query_all_MLB_Odds_matches(self, last_n_days, at_location, purge):
 
-		path_check = self.paths[0].split("/Bat")[0] + "/Regression"
+
+		print("Matching names (bat) ...")
+
+		#Match names with the original database
+		path_check = self.paths[0] + "/Clean_Data/FanGraphs_Box_Scores.csv"
+		if not path.exists(path_check):
+			sys.exit("Missing file:" + "\t" + path_check)
+
+		batters = pd.read_csv(path_check)["Name"]
+		batters = np.array(list(set(list(batters))))
+
+
+		bat["Name_Key"] = ""
+		for i in tqdm(range(0, len(bat))):
+			bat.at[i, "Name_Key"] = find_name(bat, i, batters)
+
+
+		print("Matching names (pitch) ...")
+
+		path_check = self.paths[1] + "/Clean_Data/FanGraphs_Box_Scores.csv"
+		if not path.exists(path_check):
+			sys.exit("Missing file:" + "\t" + path_check)
+
+		pitchers = pd.read_csv(path_check)["Name"]
+		pitchers = np.array(list(set(list(pitchers))))
+
+		pitch["Name_Key"] = ""
+		for i in tqdm(range(0, len(pitch))):
+			pitch.at[i, "Name_Key"] = find_name(pitch, i, pitchers)
+
+
+
+		print("Saving ...")
+
+		#Save
+		path_check = self.paths[3] + "/Predicted_Lineups"
 		if not path.exists(path_check):
 			os.mkdir(path_check)
-			print("Created directory at:" + "\t" + path_check)
 
-		path_check = path_check + "/" + str(last_n_days)
+		path_check = self.paths[3] + "/Predicted_Lineups/" + date 
 		if not path.exists(path_check):
 			os.mkdir(path_check)
-			print("Created directory at:" + "\t" + path_check)		
+
+		bat.to_csv(path_check + "/Bat.csv", index = False)
+		pitch.to_csv(path_check + "/Pitch.csv", index = False)
+		betting.to_csv(path_check + "/Moneyline.csv", index = False)
+
+		print("Data avaible at: " + "\t" +  path_check)
 
 
-		path_check = self.paths[3] + "/Clean_Data/MLB_Odds.csv"
+
+
+	def Merge_Predicted_Lineups(self):
+
+		path_check = self.paths[3] + "/Predicted_Lineups"
 		if not path.exists(path_check):
-			sys.exit("Missing file at:" + "\t" + path_check)
+			sys.exit("Missing directory at:" + "\t" + path_check)
 
-		scores = pd.read_csv(path_check)
+		files_ext = [x for x in os.listdir(path_check) if "-" in x]
+		if len(files_ext) == 0:
+			sys.exit("No files to process:" + "\t" + path_check)
 
-		frames = []
-		for i in range(0, 2):
-			path_check = self.paths[i] + "/Clean_Data/FanGraphs_Box_Scores.csv"
-			if not path.exists(path_check):
-				sys.exit("Missing file at:" + "\t" + path_check)
+		bat = []
+		pitch = []
+		moneylines = []
 
-			frames.append(pd.read_csv(path_check))	
+		for ext in files_ext:
+
+			path_load = path_check + "/" + ext
+
+			if len(bat) == 0:
+				bat = pd.read_csv(path_load + "/Bat.csv")
+			else:
+				bat = bat.append(pd.read_csv(path_load + "/Bat.csv"), ignore_index=True)
+
+			if len(pitch) == 0:
+				pitch = pd.read_csv(path_load + "/Pitch.csv")
+			else:
+				pitch = pitch.append(pd.read_csv(path_load + "/Pitch.csv"), ignore_index=True)		
+
+			if len(moneylines) == 0:
+				moneylines = pd.read_csv(path_load + "/Moneyline.csv")
+			else:
+				moneylines = moneylines.append(pd.read_csv(path_load + "/Moneyline.csv"), ignore_index=True)
+
+		def find_name(frame, row, all_names):
+
+			dummy = np.char.lower(all_names)
+
+			f_name = str(frame.at[row, "Full_Name"]) + str(frame.at[row, "Team"])
+
+			index = np.where(dummy == f_name.lower())[0]
+
+			if len(index) != 0:
+				return f_name
+
+			p_name = str(frame.at[row, "Family_Name"]) + str(frame.at[row, "Team"])
+			p_name = p_name.lower()
+
+			temp = str(frame.at[row, "Family_Name"])
+			family_name = "".join([x for x in temp if x.isalpha()])
+
+			family_name = family_name.lower()
+			team_name = str(frame.at[row, "Team"]).lower()
+
+			m = []
+			for i in range(0, len(all_names)):
+				temp = "".join([x for x in dummy[i] if x.isalpha()])
+
+				if (family_name in temp) and (team_name in temp):
+					m.append(i) 
+					
+
+			if len(m) == 0:
+				return ""
+
+			out = ""
+
+			for i in m:
+				temp = [x for x in all_names[i][0:len(all_names[i]) - 3] if x.isupper()]
+				initials = temp[0] + "." 
+				abreviated_name = initials + str(frame.at[row, "Family_Name"])
+
+				if abreviated_name[-2:] == "Jr":
+					abreviated_name = abreviated_name + "."
+
+				if abreviated_name == str(frame.at[row, "Abreviated_Name"]):
+					out = all_names[i]
+					break
 
 
-		path_check = self.paths[1] + "/Clean_Data/FanGraphs_Box_Scores_SP.csv"
-		if not path.exists(path_check):
-			sys.exit("Missing file at:" + "\t" + path_check)
+			if frame.at[row, "Full_Name"] == "KikeHernandez":
+				return "EnriqueHernandez" + str(frame.at[row, "Team"])
 
-		frames.append(pd.read_csv(path_check))	
+			if frame.at[row, "Full_Name"] == "A.Toro-Hernandez":
+				return "AbrahamToro" + str(frame.at[row, "Team"])				
+
+			return out
 
 
-		#Purges IDs that were previously processed if the directory associated with "last_n_days" already exists
-		path_check = self.paths[0].split("/Bat")[0] + "/Regression" + "/" + str(last_n_days) + "/X.csv"
+
+		#Find missing names
+		bat_na = np.where(bat["Name_Key"].isnull())[0]
+		if len(bat_na) > 0:
+
+			path_check = self.paths[0] + "/Clean_Data/FanGraphs_Box_Scores.csv"
+			batters = pd.read_csv(path_check)["Name"]
+			batters = np.array(list(set(list(batters))))
+
+			for i in tqdm(bat_na):
+				bat.at[i, "Name_Key"] = find_name(bat, i, batters) 
+
+
+
+		pitch_na = np.where(pitch["Name_Key"].isnull())[0]
+		if len(pitch_na) > 0:
+
+			path_check = self.paths[1] + "/Clean_Data/FanGraphs_Box_Scores.csv"
+			pitchers = pd.read_csv(path_check)["Name"]
+			pitchers = np.array(list(set(list(pitchers))))	
+
+			for i in tqdm(pitch_na):
+				pitch.at[i, "Name_Key"] = find_name(pitch, i, pitchers) 
+
+
+
+		path_save = self.paths[3] + "/Predicted_Lineups"
+		bat.to_csv(path_save + "/All_Batters.csv", index = False)
+		pitch.to_csv(path_save + "/All_Pitchers.csv", index = False)
+		moneylines.to_csv(path_save + "/All_Moneylines.csv", index = False)
+
+
+
+
+	def Billet_Loto_Quebec(self):
+
+		date = datetime.strftime(datetime.now(), "%Y-%m-%d")
+		path_check = self.paths[3] + "/Predicted_Lineups/" + "Loto_Quebec_" + date + "/Billet.csv" 
 		if path.exists(path_check):
-			print("Regression frame already exists, updating...")
+			sys.exit("Forbiden: Cannot overwrite Billet.csv  ----  File is final.")
 
-			temp_frame = pd.read_csv(path_check)			
-			IDs_done = list(temp_frame["ID"])
+		url = "https://miseojeu.lotoquebec.com/fr/offre-de-paris/baseball/mlb/matchs?idAct=11"
 
-			if purge:
-				top_date = min(pd.to_datetime(temp_frame["Date"])) 
-				to_rmv = np.where(pd.to_datetime(scores["Date"]) > top_date)[0]
-				IDs_done = list(set(list(IDs_done + list(scores.loc[to_rmv, "ID"]))))
+		headers = {
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
+    	}
 
-			keep = np.where(scores["ID"].isin(IDs_done) == False)[0]
-			if len(keep) == 0:
-				sys.exit("No matches to process.")
-			scores = scores.iloc[keep].reset_index(drop = True)
+		print("Accessing Loto-Quebec website...")
 
-			if purge:
+		#Obtain page data
+		html = requests.get(url , stream = True, headers = headers).content
+		try:
+			tables = pd.read_html(html)
+			soup = BeautifulSoup(html)
+		except:
+			sys.exit("Error: No bets found   ----   Too early, or no games today.")
 
-				for i in range(0, len(frames)):
-					keep = np.where(frames[i]["ID"].isin(IDs_done) == False)[0]
-					if len(keep) == 0:
-						sys.exit("No matches to process.")
-					frames[i] = frames[i].iloc[keep].reset_index(drop = True)
+		#Obtain moneylines
+		moneylines = [x for x in tables if len(x.columns) == 4]
+		moneylines = [x for x in moneylines if "Baseball  MLB" in x.iloc[0,1]]
 
-		rows_out_x = []
+		billet = pd.DataFrame([moneylines[0].iloc[0,1], moneylines[0].iloc[0,2]]).T
 
-		for i in tqdm(range(0, len(scores))):
+		for x in moneylines[1:]:
+			temp = pd.DataFrame([x.iloc[0,1], x.iloc[0,2]]).T
 
-			ID = scores.at[i, "ID"]
+			if "pt(s)" in temp.iloc[0,0]:
+				break
+			
+			else:
+				billet = billet.append(temp, ignore_index = True)
+
+		billet.columns = ["Home", "Away"]
+
+		teams = []
+		returns = []
+
+		for j in range(0, 2):
+
+			temp = billet.iloc[:,j]
+			nm = temp.str.split("  ")
+
+			t = []
+			r = []
+			for i in range(0, len(temp)):
+
+				t.append(nm[i][2])
+				r.append(float(nm[i][3].replace(",", ".")))
+
+
+			teams.append(t)
+			returns.append(r)
+
+
+		out = pd.DataFrame([teams[1], returns[1], teams[0], returns[0]]).T
+		out.columns = ["Team_Home", "Factor_Home", "Team_Away", "Factor_Away"]
+		out["Date"] = str(datetime.now()).split(" ")[0]
+
+		path_check = self.paths[3] + "/Predicted_Lineups/" + "Loto_Quebec_" + out["Date"][0] 
+		if not path.exists(path_check):
+			os.mkdir(path_check)
+
+		out.to_csv(path_check + "/Billet.csv", index = False)
+
+		print("Done.")
+
+
+
+	def Ajouter_Lineups(self):
+
+		date = datetime.strftime(datetime.now(), "%Y-%m-%d")
+		path_check = self.paths[3] + "/Predicted_Lineups/" + "Loto_Quebec_" + date
+		if not path.exists(path_check):
+			sys.exit("Aucun Billet.")
+
+		billet = pd.read_csv(path_check + "/Billet.csv")
+		original = billet[["Team_Home", "Team_Away"]].copy()
+		original.columns = ["LotoQ_Symbol_Home", "LotoQ_Symbol_Away"]
+		billet = billet.join(original)
+
+		#Translate team names
+		billet = self.Fix_Team_Names(billet, "City")
+
+		#Attempt to obtain predicted lineups
+		url = "https://www.rotowire.com/baseball/daily-lineups.php"
+		headers = {
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
+    	}
+
+		print("Accessing: " + url +  " ...")
+
+		#Extract projected roosters
+		html = requests.get(url, headers = headers).content
+		soup = BeautifulSoup(html)
+
+		#Extract the rooster html object
+		tables = soup.find_all("div", class_ = "lineup__box")
+		#Filter garbage
+		tables = [x for x in tables if len(x.find_all("div", class_ = "lineup__abbr")) == 2 and len(x.find_all("li", {"class" : "lineup__status"})) == 2]
+
+		if len(tables) == 0:
+			sys.exit("No predicted lineups found.")
+
+		print(str(len(tables)) + " Lineups found...")
+
+		#Initialize containers
+		teams = []
+		bat = []
+		pitch = []
+
+		#Retrieve data
+		ID = 0
+		for x in tables:
+
+			frame_bat = pd.DataFrame(index = np.arange(0,9), 
+										columns = ["Batter_Home", "Batter_Away"])
+
+			frame_pitch = pd.DataFrame(index = np.arange(0,1), 
+										columns = ["Pitcher_Home", "Pitcher_Away"])	
+
+			frame_team = pd.DataFrame(index = np.arange(0,1), 
+										columns = ["Team_Home", "Team_Away"])				
+
+			home = x.find("ul", class_ = "lineup__list is-home")
+			away = x.find("ul", class_ = "lineup__list is-visit")
+
+			data = [home, away]
+
+			for i in range(0,2):
+
+				#Batter names
+				batters = data[i].find_all("li", class_ = "lineup__player")
+				for j in range(0, len(batters)):
+					frame_bat.iloc[j,i] = batters[j].text.split("\n")[2]
+
+				#Starting pitcher names
+				pitchers = data[i].find("div", class_ = "lineup__player-highlight-name").text.split("\n")[1]
+				frame_pitch.iloc[0,i] = pitchers
+
+
+			#Teams
+			frame_team.iloc[0,0] = x.find("div", class_ = "lineup__team is-home").text.split("\n")[2]
+			frame_team.iloc[0,1] = x.find("div", class_ = "lineup__team is-visit").text.split("\n")[2]
+
+			frame_bat["Team_Home"] = str(frame_team.iloc[0,0])
+			frame_bat["Team_Away"] = str(frame_team.iloc[0,1])
+
+			frame_pitch["Team_Home"] = str(frame_team.iloc[0,0])
+			frame_pitch["Team_Away"] = str(frame_team.iloc[0,1])
+
+			
+			#Tag matches
+			frame_team["ID"] = ID
+			frame_bat["ID"] = ID
+			frame_pitch["ID"] = ID
+
+			#Update ID
+			ID += 1
+
+			#####
+			#CHECK IF THE LINEUP ARE EXPECTED OR CONFIRMED
+			status = x.find_all("li", {"class" : "lineup__status"})
+
+			frame_team["Lineup_Away"] = status[0]["class"][-1]
+			frame_bat["Lineup_Away"] = status[0]["class"][-1]
+			frame_pitch["Lineup_Away"] = status[0]["class"][-1]	
+
+
+
+			frame_team["Lineup_Home"] = status[1]["class"][-1]
+			frame_bat["Lineup_Home"] = status[1]["class"][-1]
+			frame_pitch["Lineup_Home"] = status[1]["class"][-1]			
+
+
+			#Append results
+			if len(teams) == 0:
+				teams = frame_team
+			else:
+				teams = teams.append(frame_team, ignore_index = True)
+
+			if len(bat) == 0:
+				bat = frame_bat
+			else:
+				bat = bat.append(frame_bat, ignore_index = True)
+
+			if len(pitch) == 0:
+				pitch = frame_pitch
+			else:
+				pitch = pitch.append(frame_pitch, ignore_index = True)			
+
+
+		#Fix team names
+		teams = self.Fix_Team_Names(teams, "City")
+		bat = self.Fix_Team_Names(bat, "City")
+		pitch = self.Fix_Team_Names(pitch, "City")
+
+		print(teams)
+
+
+		#Fix player names
+		print("Translating names to FanGraph values ...")
+
+		path_check = self.paths[0] + "/Clean_Data/FanGraphs_Box_Scores.csv"
+		batters = pd.read_csv(path_check)["Name"]
+		batters = np.array(list(set(list(batters))))
+
+		path_check = self.paths[1] + "/Clean_Data/FanGraphs_Box_Scores.csv"
+		pitchers = pd.read_csv(path_check)["Name"]
+		pitchers = np.array(list(set(list(pitchers))))
+
+
+		def find_name(name, team, all_names):
+
+			current = "None"
+
+			dummy = np.char.lower(all_names)
+
+			family_name = name.split(" ")[-1]
+			first_letter = name[0]
+
+			while True:
+
+				#First Search
+				search_val = (name.replace(" ", "") + team).lower()
+				matches = np.where(dummy == search_val)[0]
+				if len(matches) > 0:
+					break
+
+				#Second search, by family name
+				search_val = (family_name + team).lower()
+				matches = []
+				for i in range(0, len(dummy)):
+					if search_val in dummy[i]:
+						matches.append(i)
+
+				if len(matches) > 0:
+					break
+
+				#Third search, with no alphanumerics
+				search_val = "".join([x for x in search_val if x.isalpha()])
+				matches = []
+				for i in range(0, len(dummy)):
+					if search_val in "".join([x for x in dummy[i] if x.isalpha()]):
+						matches.append(i)	
+
+				if len(matches) > 0:
+					break	
+
+
+				#Added: family name, no team
+				search_val = (family_name).lower()	
+				matches = []
+				for i in range(0, len(dummy)):
+					if search_val in "".join([x for x in dummy[i] if x.isalpha()]):
+						matches.append(i)	
+
+				if len(matches) > 0:
+					break						
+
+
+				#Added: search for junior
+				search_val = (family_name + "jr").lower()	
+				matches = []
+				for i in range(0, len(dummy)):
+					if search_val in "".join([x for x in dummy[i] if x.isalpha()]):
+						matches.append(i)	
+
+				if len(matches) > 0:
+					break	
+
+
+
+				#Alternative search, with possible 2nd family name
+				family_name = name.split(" ")[-2]
+
+				#3rd search, by family name
+				search_val = (family_name + team).lower()
+				matches = []
+				for i in range(0, len(dummy)):
+					if search_val in dummy[i]:
+						matches.append(i)
+
+				if len(matches) > 0:
+					break	
+
+				#4th, with no alphanumerics
+				search_val = "".join([x for x in search_val if x.isalpha()])
+				matches = []
+				for i in range(0, len(dummy)):
+					if search_val in "".join([x for x in dummy[i] if x.isalpha()]):
+						matches.append(i)			
+
+				if len(matches) > 0:
+					break	
+
+				break
+
+
+			if len(matches) > 0:
+				for i in matches:
+					if all_names[i][0] == first_letter and all_names[i][-3:] == team:
+						current = all_names[i]
+
+			return current
+
+
+		#Initialize copies, esier to test on...
+		fangraph_bat = bat.copy()
+		fangraph_pitch = pitch.copy()
+
+		for j in tqdm(range(0, len(bat))):
+			fangraph_bat.iloc[j, 0] = find_name(bat.at[j, "Batter_Home"], bat.at[j, "Team_Home"], batters)
+			fangraph_bat.iloc[j, 1] = find_name(bat.at[j, "Batter_Away"], bat.at[j, "Team_Away"], batters)
+
+		for j in tqdm(range(0, len(pitch))):
+			fangraph_pitch.iloc[j, 0] = find_name(pitch.at[j, "Pitcher_Home"], pitch.at[j, "Team_Home"], pitchers)
+			fangraph_pitch.iloc[j, 1] = find_name(pitch.at[j, "Pitcher_Away"], pitch.at[j, "Team_Away"], pitchers)
+
+
+		rmv = []
+		#Remove matches where the starting pitcher wasn't found in the database
+		pitch_missing = np.where(np.logical_or(fangraph_pitch["Pitcher_Home"] == "None", fangraph_pitch["Pitcher_Away"] == "None"))[0]
+		if len(pitch_missing) > 0:
+			for x in pitch_missing:
+				rmv.append(fangraph_pitch.at[x, "ID"])	
+
+		rmv = list(set(list(rmv)))	
+
+		if len(rmv)	> 0:
+			index = [x for x in np.arange(0, len(fangraph_bat)) if fangraph_bat.at[x, "ID"] not in rmv]
+			fangraph_bat = fangraph_bat.iloc[index].reset_index(drop = True)
+
+			index = [x for x in np.arange(0, len(fangraph_pitch)) if fangraph_pitch.at[x, "ID"] not in rmv]
+			fangraph_pitch = fangraph_pitch.iloc[index].reset_index(drop = True)
+
+			index = [x for x in np.arange(0, len(teams)) if teams.at[x, "ID"] not in rmv]
+			teams = teams.iloc[index].reset_index(drop = True)	
+
+
+
+		#Keep track of how many batters couldn't be found in the database	
+
+		teams["Batters_Missing_Home"] = 0
+		teams["Batters_Missing_Away"] = 0
+
+		bat_missing = np.where(np.logical_or(fangraph_bat["Batter_Home"] == "None", fangraph_bat["Batter_Away"] == "None"))[0]
+		if len(bat_missing) > 0:
+
+			for i in bat_missing:
+
+				i_team = np.where(teams["ID"] == fangraph_bat.at[i, "ID"])[0][0]
+
+				if fangraph_bat.at[i, "Batter_Home"] == "None":
+					teams.at[i_team, "Batters_Missing_Home"] += 1
+
+				if fangraph_bat.at[i, "Batter_Away"] == "None":
+					teams.at[i_team, "Batters_Missing_Away"] += 1				
+
+		teams["Batters_Missing_Total"] = teams["Batters_Missing_Home"] + teams["Batters_Missing_Away"]
+
+
+
+		#Match billet and teams
+		billet = pd.merge(billet, teams, how = "inner", on = ["Team_Home", "Team_Away"]).drop_duplicates(["Team_Home", "Team_Away"],keep= 'first')
+
+		#Keep roosters
+		index = [x for x in np.arange(0, len(fangraph_bat)) if fangraph_bat.at[x, "ID"] in list(billet["ID"])]
+		fangraph_bat = fangraph_bat.iloc[index].reset_index(drop = True)
+
+		index = [x for x in np.arange(0, len(fangraph_pitch)) if fangraph_pitch.at[x, "ID"] in list(billet["ID"])]
+		fangraph_pitch = fangraph_pitch.iloc[index].reset_index(drop = True)
+
+
+		#Add metrics
+		billet["Returns_Home"] = billet["Factor_Home"] - 1
+		billet["Returns_Away"] = billet["Factor_Away"] - 1
+
+		billet["Odds_Home"] = 1 / billet["Factor_Home"] 
+		billet["Odds_Away"] = 1 / billet["Factor_Away"] 
+
+		billet["OverOdds"] = billet["Odds_Home"] + billet["Odds_Away"] - 1
+
+		billet["Odds_Home_FAIR"] = billet["Odds_Home"] / (billet["Odds_Home"] + billet["Odds_Away"])
+		billet["Odds_Away_FAIR"] = billet["Odds_Away"] / (billet["Odds_Home"] + billet["Odds_Away"])	
+
+		#Add date
+		fangraph_bat["Date"] = date
+		fangraph_pitch["Date"] = date
+
+		#Save
+		path_save = self.paths[3] + "/Predicted_Lineups/" + "Loto_Quebec_" + date + "/"
+		billet.to_csv(path_save + "Billet_Final.csv", index = False)
+		fangraph_bat.to_csv(path_save + "Bat.csv", index = False)
+		fangraph_pitch.to_csv(path_save + "Pitch.csv", index = False)
+
+		print(billet)
+
+
+
+
+	def Assemble_Billet_Backtesting_Loto_Quebec(self):
+
+		path_dir = self.paths[3] + "/Predicted_Lineups/"
+		paths = [x for x in os.listdir(path_dir) if "Loto_Quebec" in x and ".csv" not in x]
+
+		if len(paths) == 0:
+			sys.exit("Aucun billet...")
+
+		billet = []
+		bat = []
+		pitch = []
+
+		for x in paths:
+			if len(billet) == 0:
+				billet = pd.read_csv(path_dir + x + "/Billet_Final.csv")
+			else:
+				billet = billet.append(pd.read_csv(path_dir + x + "/Billet_Final.csv"), ignore_index = True)
+
+			if len(bat) == 0:
+				bat = pd.read_csv(path_dir + x + "/Bat.csv")
+			else:
+				bat = bat.append(pd.read_csv(path_dir + x + "/Bat.csv"), ignore_index = True)
+
+			if len(pitch) == 0:
+				pitch = pd.read_csv(path_dir + x + "/Pitch.csv")
+			else:
+				pitch = pitch.append(pd.read_csv(path_dir + x + "/Pitch.csv"), ignore_index = True)				
+
+
+
+		path_save = self.paths[3] + "/Predicted_Lineups/"
+		billet.to_csv(path_save + "Historique_Loto_Quebec_Moneylines.csv", index = False)
+		bat.to_csv(path_save + "Historique_Loto_Quebec_Bat.csv", index = False)
+		pitch.to_csv(path_save + "Historique_Loto_Quebec_Pitch.csv", index = False)
+
+		print(billet)
+		
+
+	def Evaluer_Billet_Adj(self, n):
+
+		date = datetime.strftime(datetime.now(), "%Y-%m-%d")
+		path_check = self.paths[0].replace("Bat", "") + "Regression/" + str(n) + "/Betting_Fitted_Odds.csv"
+
+		if not path.exists(path_check):
+			sys.exit("Missing file:" + "\t" + path_save)
+
+		billet = pd.read_csv(path_check)
+
+		index = np.where(billet["Date"] == date)[0]
+		if len(index) == 0:
+			sys.exit("No bets placed on:" + "\t" + date)
+
+		billet = billet.iloc[index].reset_index(drop = True)
+
+		#Check for live scores
+		url = "https://www.mlb.com/scores" 
+
+		headers = {
+        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
+    	}
+
+		print("Accessing " + url + "...")
+
+		#Obtain page data
+		html = requests.get(url, headers = headers).content
+		soup = BeautifulSoup(html)
+
+		tables = soup.find_all("div", {"data-test-mlb" : "singleGameContainer"})
+		data = pd.DataFrame(index = np.arange(0, len(tables)), columns = ["Team_Home", "Team_Away", "Score_Home", "Score_Away", "Status"])
+		data["Status"] = "Not_Final"
+
+		for i in range(0, len(data)):
 
 			try:
-				new_row = self.Query_from_ID(ID, last_n_days, at_location, frames[0], frames[1], frames[2])
+
+				teams = tables[i].find_all("div", {"data-mlb-test" : "teamNameLabel"})
+
+				data.at[i, "Team_Away"] = teams[0].text
+				data.at[i, "Team_Home"] = teams[1].text
+
+				data.at[i, "Score_Away"] = int(tables[i].find_all("td", {"data-col" : "0", "data-row" : "0"})[0].text)
+				data.at[i, "Score_Home"] = int(tables[i].find_all("td", {"data-col" : "0", "data-row" : "1"})[0].text)
+
+				tables[i].find_all("div", {"data-mlb-test" : "gameStartTimesStateContainer"})
+
+				if "Final" in tables[i].find_all("div", {"data-mlb-test" : "gameStartTimesStateContainer"})[0].text:
+
+					data.at[i, "Status"] = "Final"
+
+
 
 			except:
-				print("\t" + "\t" + "**** Insuficient data for match ****:")
-				print(pd.DataFrame(scores.iloc[i]).transpose()[["Date", "Team_Home", "Team_Away"]])
+
 				continue
 
-			if len(new_row) > 0:
 
-				to_add = pd.DataFrame(scores.iloc[i]).transpose().copy().reset_index(drop = True)
-				new_row[to_add.columns] = to_add
+		rmv = np.where(data["Score_Away"].isnull())[0]
+		if len(rmv) > 0:
+			data = data.drop(rmv).reset_index(drop = True)
 
-				rows_out_x.append(new_row)
+		rmv = np.where(data["Status"] == "Not_Final")[0]
+		if len(rmv) > 0:
+			data = data.drop(rmv).reset_index(drop = True)		
 
-			else:
-				print("\t" + "\t" + "**** Insuficient data for match ****:")
-				print(pd.DataFrame(scores.iloc[i]).transpose()[["Date", "Team_Home", "Team_Away"]])				
+		data = self.Fix_Team_Names(data, "City")
 
-			#Save and purge every 100 iterations
-			if ((i + 1) % 100 == 0 or i == (len(scores) - 1)) and len(rows_out_x) > 0:
+		#Join tables
+		billet = pd.merge(billet, data, how = "inner", on = ["Team_Home", "Team_Away"])
+		billet["Win"] = 1
 
-				#Assemble rows into a frame and save
-				X = pd.concat(rows_out_x)	
-				path_check = self.paths[0].split("/Bat")[0] + "/Regression" + "/" + str(last_n_days) 					
-				self.update_file(path_check, "X.csv", X)
+		loss = np.where(billet["Score_Home"] <= billet["Score_Away"])[0]
+		if len(loss) > 0:
+			billet.loc[loss, "Win"] = 0
 
-				IDs_done = list(X["ID"])
+		#Simulate 10$ bets
+		#Arbitrage
+		billet["10$_Bets_Delta"] = 10 * (billet["Factor_Home"] * billet["Win"] * billet["Linear_Home"] + billet["Factor_Away"] * (1 - billet["Win"]) * billet["Linear_Away"] - 1)
+		billet["10$_Bets_Cumsum"] = np.cumsum(billet["10$_Bets_Delta"])
+		billet["Arbitrage_Returns"] = billet["10$_Bets_Cumsum"] / (10 * (1 + np.arange(0, len(billet))))
 
-				rows_out_x = []
-					
-				if purge:
+		#Kelly
+		money = len(billet) * 10
+		scale = billet[["Kelly_Home", "Kelly_Away"]].sum().sum()
 
-					for i in range(0, len(frames)):
-						keep = np.where(frames[i]["ID"].isin(IDs_done) == False)[0]
-						if len(keep) == 0:
-							sys.exit("No matches to process.")
-						frames[i] = frames[i].iloc[keep].reset_index(drop = True)
+		billet.loc[:, ["Kelly_Home", "Kelly_Away"]] = billet.loc[:, ["Kelly_Home", "Kelly_Away"]] / scale
 
-				print("Purged frame and saved progress.")
+		billet["Kelly_Bets_Delta"] = money * (billet["Factor_Home"] * billet["Win"] * billet["Kelly_Home"] + billet["Factor_Away"] * (1 - billet["Win"]) * billet["Kelly_Away"] - (billet["Kelly_Home"] + billet["Kelly_Away"]))
+		billet["Kelly_Bets_Cumsum"] = np.cumsum(billet["Kelly_Bets_Delta"])
+		billet["Kelly_Returns"] = billet["Kelly_Bets_Cumsum"] / (10 * (1 + np.arange(0, len(billet))))
+
+		print("####################################################################################")
+		print("####################################################################################")
+		print("###################" + "\t" + "\t" + "BETTING RESULTS"  + "\t" + "\t" + "############################")
+		print("###################" + "\t" + "\t" + date + "\t" + "\t" + "############################")
+		print("####################################################################################")
+		print("####################################################################################")
+		print("")
+		print("")
+		print("")
+		print("")
+
+		print(billet[["Team_Home", "Team_Away", "10$_Bets_Cumsum", "Arbitrage_Returns", "Kelly_Bets_Cumsum", "Kelly_Returns"]])
+
+		billet.to_csv(self.paths[3] + "/Predicted_Lineups/Loto_Quebec_Gains_today.csv")
+
+
+
+	def Reddit_Print_Billet_Final(self, n):
+
+		date = datetime.strftime(datetime.now(), "%Y-%m-%d")
+		path_check = self.paths[0].replace("Bat", "") + "Regression/" + str(n) + "/Betting_Fitted_Odds.csv"
+
+		if not path.exists(path_check):
+			sys.exit("Missing file:" + "\t" + path_save)
+
+		billet = pd.read_csv(path_check)
+		keep = np.where(billet["Date"] == date)[0]
+		if len(keep) == 0:
+			sys.exit("No bets made on that day.")
+
+		billet = billet.iloc[keep].reset_index(drop = True)
+
+		out = billet[["Team_Home", "Team_Away", "Factor_Home", "Factor_Away"]].copy()
+		out.columns = ["Team_Home", "Team_Away", "R_LotoQ_Home", "R_LotoQ_Away"]
+		out["R_Model_Home"] = (1 / billet["Odds"]).round(2)
+		out["R_Model_Away"] = (1 / (1 - billet["Odds"])).round(2)
+		out["Bet_on"] = out["Team_Home"]
+		out["R+"] = out["R_LotoQ_Home"] - out["R_Model_Home"]
+
+		bet_away = np.where(billet["Linear_Away"] == 1)[0]
+		if len(bet_away) > 0:
+			out.loc[bet_away, "Bet_on"] = out.loc[bet_away, "Team_Away"].copy()
+			out.loc[bet_away, "R+"] = out.loc[bet_away, "R_LotoQ_Away"].copy() - out.loc[bet_away, "R_Model_Away"].copy()
+
+		out["NaN"] = billet["Batters_Missing_Total"]
+		out["Cf"] = "None"
+
+		for i in range(0, len(out)):
+			if billet.at[i, "Lineup_Home"] == "is-confirmed" and billet.at[i, "Lineup_Away"] == "is-confirmed":
+				out.at[i, "Cf"] = "Both"
+			elif billet.at[i, "Lineup_Home"] == "is-confirmed":
+				out.at[i, "Cf"] = "Home"
+			elif billet.at[i, "Lineup_Away"] == "is-confirmed":
+				out.at[i, "Cf"] = "Away"				
+
+		print(out)
+
+
+
 
 
 
