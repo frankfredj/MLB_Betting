@@ -58,6 +58,9 @@ Implementation started on 2020-08-30, and the most recent performance are:
 ![](https://i.imgur.com/5Q2Z9cP.png)
 
 
+The relative performance (metric_model / metric_LotoQc) are summarized in the table below. R corresponds to the average ROI for a single bet, whereas Cor stands for the correlation between the model's predicted probabilities, and LotoQc's implied fair probabilities. Lastly, Agreement denotes the proportion of instances where both the model and LotoQc agreed on who the predicted winner is.
+
+![](https://i.imgur.com/Fd0uf4K.png)
 
 
 
